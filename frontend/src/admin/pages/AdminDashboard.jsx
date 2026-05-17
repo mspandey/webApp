@@ -50,7 +50,6 @@ const emptyStats = {
   },
 };
 
-
 const normalizeStats = (payload) => {
   const data = payload?.data || payload || {};
 
@@ -58,12 +57,21 @@ const normalizeStats = (payload) => {
     ...emptyStats,
     totals: { ...emptyStats.totals, ...(data.totals || {}) },
     money: { ...emptyStats.money, ...(data.money || {}) },
-    performance: { ...emptyStats.performance, ...(data.performance || {}) },
-    breakdowns: { ...emptyStats.breakdowns, ...(data.breakdowns || {}) },
+    performance: {
+      ...emptyStats.performance,
+      ...(data.performance || {}),
+    },
+    breakdowns: {
+      ...emptyStats.breakdowns,
+      ...(data.breakdowns || {}),
+    },
     recentOrders: data.recentOrders || [],
     topPizzas: data.topPizzas || [],
     revenueSeries: data.revenueSeries || [],
-    razorpay: { ...emptyStats.razorpay, ...(data.razorpay || {}) },
+    razorpay: {
+      ...emptyStats.razorpay,
+      ...(data.razorpay || {}),
+    },
   };
 };
 
@@ -80,27 +88,57 @@ const startOfMonth = () => {
   return date;
 };
 
-const buildFallbackStats = ({ orders = [], users = [], pizzas = [], toppings = [], razorpay = {} }) => {
-  const paidOrders = orders.filter((order) => ["paid", "cod"].includes(order.paymentStatus));
+const buildFallbackStats = ({
+  orders = [],
+  users = [],
+  pizzas = [],
+  toppings = [],
+  razorpay = {},
+}) => {
+  const paidOrders = orders.filter((order) =>
+    ["paid", "cod"].includes(order.paymentStatus)
+  );
+
   const today = startOfDay();
   const month = startOfMonth();
-  const grossRevenue = paidOrders.reduce((sum, order) => sum + (Number(order.totalAmount) || 0), 0);
+
+  const grossRevenue = paidOrders.reduce(
+    (sum, order) => sum + (Number(order.totalAmount) || 0),
+    0
+  );
+
   const todayRevenue = paidOrders
     .filter((order) => new Date(order.createdAt) >= today)
     .reduce((sum, order) => sum + (Number(order.totalAmount) || 0), 0);
+
   const monthlyRevenue = paidOrders
     .filter((order) => new Date(order.createdAt) >= month)
     .reduce((sum, order) => sum + (Number(order.totalAmount) || 0), 0);
-  const deliveredOrders = orders.filter((order) => order.orderStatus === "delivered").length;
-  const cancelledOrders = orders.filter((order) => order.orderStatus === "cancelled").length;
+
+  const deliveredOrders = orders.filter(
+    (order) => order.orderStatus === "delivered"
+  ).length;
+
+  const cancelledOrders = orders.filter(
+    (order) => order.orderStatus === "cancelled"
+  ).length;
 
   const topPizzaMap = paidOrders.reduce((acc, order) => {
     (order.items || []).forEach((item) => {
       const key = item.name || "Pizza";
-      acc[key] = acc[key] || { _id: key, quantity: 0, revenue: 0 };
+
+      acc[key] = acc[key] || {
+        _id: key,
+        quantity: 0,
+        revenue: 0,
+      };
+
       acc[key].quantity += Number(item.qty) || 0;
-      acc[key].revenue += (Number(item.price) || 0) * (Number(item.qty) || 0);
+
+      acc[key].revenue +=
+        (Number(item.price) || 0) * (Number(item.qty) || 0);
     });
+
     return acc;
   }, {});
 
@@ -108,16 +146,19 @@ const buildFallbackStats = ({ orders = [], users = [], pizzas = [], toppings = [
     totals: {
       orders: orders.length,
       users: users.length,
-      activeUsers: users.filter((item) => item.status !== "inactive").length,
+      activeUsers: users.filter((u) => u.status !== "inactive").length,
       pizzas: pizzas.length,
-      availablePizzas: pizzas.filter((item) => item.isAvailable !== false).length,
-      toppings: toppings.filter((item) => item.isAvailable !== false).length,
-      paidOrders: orders.filter((order) => order.paymentStatus === "paid").length,
-      codOrders: orders.filter((order) => order.paymentStatus === "cod").length,
-      pendingPayments: orders.filter((order) => order.paymentStatus === "pending").length,
+      availablePizzas: pizzas.filter((p) => p.isAvailable !== false).length,
+      toppings: toppings.filter((t) => t.isAvailable !== false).length,
+      paidOrders: orders.filter((o) => o.paymentStatus === "paid").length,
+      codOrders: orders.filter((o) => o.paymentStatus === "cod").length,
+      pendingPayments: orders.filter(
+        (o) => o.paymentStatus === "pending"
+      ).length,
       deliveredOrders,
       cancelledOrders,
     },
+
     money: {
       grossRevenue,
       revenue: grossRevenue,
@@ -125,24 +166,41 @@ const buildFallbackStats = ({ orders = [], users = [], pizzas = [], toppings = [
       netWorth: grossRevenue,
       todayRevenue,
       monthlyRevenue,
-      averageOrderValue: paidOrders.length ? Math.round(grossRevenue / paidOrders.length) : 0,
+      averageOrderValue: paidOrders.length
+        ? Math.round(grossRevenue / paidOrders.length)
+        : 0,
     },
+
     performance: {
-      conversionRate: orders.length ? Math.round((paidOrders.length / orders.length) * 100) : 0,
-      fulfillmentRate: orders.length ? Math.round((deliveredOrders / orders.length) * 100) : 0,
-      cancellationRate: orders.length ? Math.round((cancelledOrders / orders.length) * 100) : 0,
+      conversionRate: orders.length
+        ? Math.round((paidOrders.length / orders.length) * 100)
+        : 0,
+
+      fulfillmentRate: orders.length
+        ? Math.round((deliveredOrders / orders.length) * 100)
+        : 0,
+
+      cancellationRate: orders.length
+        ? Math.round((cancelledOrders / orders.length) * 100)
+        : 0,
     },
+
     recentOrders: orders.slice(0, 6),
-    topPizzas: Object.values(topPizzaMap).sort((a, b) => b.revenue - a.revenue).slice(0, 5),
+
+    topPizzas: Object.values(topPizzaMap)
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5),
+
     revenueSeries: [],
     razorpay,
   });
 };
 
-
 function AdminDashboard() {
   const navigate = useNavigate();
+
   const { user } = useSelector((state) => state.auth);
+
   const [stats, setStats] = useState(emptyStats);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -150,53 +208,70 @@ function AdminDashboard() {
   useEffect(() => {
     const loadStats = async () => {
       try {
-
         setLoading(true);
         setError("");
+
         const res = await axios.get(`${apiUrl}/admin/stats`, {
-          headers: { Authorization: `Bearer ${user.token}` },
+          headers: {
+            Authorization: `Bearer ${user.token}`,
+          },
         });
 
         setStats(normalizeStats(res.data));
       } catch (err) {
         try {
-          const headers = { Authorization: `Bearer ${user.token}` };
-          const [ordersRes, usersRes, pizzasRes, toppingsRes, paymentRes] = await Promise.all([
+          const headers = {
+            Authorization: `Bearer ${user.token}`,
+          };
+
+          const [
+            ordersRes,
+            usersRes,
+            pizzasRes,
+            toppingsRes,
+            paymentRes,
+          ] = await Promise.all([
             axios.get(`${apiUrl}/orders`, { headers }),
-            axios.get(`${apiUrl}/user/users`, { headers }),
+
+            axios.get(`${apiUrl}/user/users`, {
+              headers,
+            }),
+
             axios.get(`${apiUrl}/pizzas`),
+
             axios.get(`${apiUrl}/toppings`),
-            axios.get(`${apiUrl}/payment/config`, { headers }).catch(() => ({ data: { data: emptyStats.razorpay } })),
+
+            axios
+              .get(`${apiUrl}/payment/config`, { headers })
+              .catch(() => ({
+                data: {
+                  data: emptyStats.razorpay,
+                },
+              })),
           ]);
 
-          setStats(buildFallbackStats({
-            orders: ordersRes.data.data || [],
-            users: usersRes.data.data || [],
-            pizzas: pizzasRes.data.data || [],
-            toppings: toppingsRes.data.data || [],
-            razorpay: paymentRes.data.data || emptyStats.razorpay,
-          }));
-          setError("Using fallback dashboard data because /admin/stats is not available yet.");
+          setStats(
+            buildFallbackStats({
+              orders: ordersRes.data.data || [],
+              users: usersRes.data.data || [],
+              pizzas: pizzasRes.data.data || [],
+              toppings: toppingsRes.data.data || [],
+              razorpay: paymentRes.data.data || emptyStats.razorpay,
+            })
+          );
+
+          setError(
+            "Using fallback dashboard data because /admin/stats is not available yet."
+          );
         } catch (fallbackErr) {
-          setError(fallbackErr.response?.data?.error || err.response?.data?.error || "Failed to load admin dashboard");
+          setError(
+            fallbackErr.response?.data?.error ||
+              err.response?.data?.error ||
+              "Failed to load admin dashboard"
+          );
         }
       } finally {
         setLoading(false);
-
-        setStats({ ...emptyStats, ...res.data.data });
-      } catch (err) {
-        setError(err.response?.data?.error || "Failed to load admin dashboard");
-      } finally {
-        setLoading(false);
-
-        const res = await axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:5000/api"}/admin/stats`, {
-          headers: { Authorization: `Bearer ${user.token}` },
-        });
-        setStats(res.data);
-      } catch {
-        console.error("Failed to load stats");
-
-
       }
     };
 
@@ -209,11 +284,12 @@ function AdminDashboard() {
     }
   }, [user, navigate]);
 
-
-  const maxRevenue = useMemo(
-    () => Math.max(1, ...stats.revenueSeries.map((item) => item.revenue || 0)),
-    [stats.revenueSeries]
-  );
+  const maxRevenue = useMemo(() => {
+    return Math.max(
+      1,
+      ...stats.revenueSeries.map((item) => item.revenue || 0)
+    );
+  }, [stats.revenueSeries]);
 
   const statCards = [
     {
@@ -250,40 +326,89 @@ function AdminDashboard() {
     <main className="min-h-screen text-white">
       <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-sm font-bold uppercase tracking-[0.35em] text-orange-300">Command center</p>
-          <h1 className="mt-2 text-4xl font-black">Admin Dashboard</h1>
-          <p className="mt-3 text-slate-400">Track net worth, revenue, orders, users, menu health, and payments in one place.</p>
+          <p className="text-sm font-bold uppercase tracking-[0.35em] text-orange-300">
+            Command center
+          </p>
+
+          <h1 className="mt-2 text-4xl font-black">
+            Admin Dashboard
+          </h1>
+
+          <p className="mt-3 text-slate-400">
+            Track net worth, revenue, orders, users, menu health,
+            and payments in one place.
+          </p>
         </div>
 
-
-        <div className={`rounded-2xl border px-5 py-4 ${stats.razorpay.isLive ? "border-emerald-300/30 bg-emerald-400/10" : "border-amber-300/30 bg-amber-400/10"}`}>
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-300">Razorpay</p>
-          <p className="mt-1 text-lg font-black">
-            {stats.razorpay.isLive ? "Live payments active" : stats.razorpay.isConfigured ? "Test mode / not live" : "Not configured"}
+        <div
+          className={`rounded-2xl border px-5 py-4 ${
+            stats.razorpay.isLive
+              ? "border-emerald-300/30 bg-emerald-400/10"
+              : "border-amber-300/30 bg-amber-400/10"
+          }`}
+        >
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-300">
+            Razorpay
           </p>
-          <p className="text-xs text-slate-400">Key: {stats.razorpay.keyPrefix}</p>
+
+          <p className="mt-1 text-lg font-black">
+            {stats.razorpay.isLive
+              ? "Live payments active"
+              : stats.razorpay.isConfigured
+              ? "Test mode / not live"
+              : "Not configured"}
+          </p>
+
+          <p className="text-xs text-slate-400">
+            Key: {stats.razorpay.keyPrefix}
+          </p>
         </div>
       </div>
 
-      {error && <div className="mb-6 rounded-2xl border border-red-400/20 bg-red-500/10 px-5 py-4 text-red-100">{error}</div>}
+      {error && (
+        <div className="mb-6 rounded-2xl border border-red-400/20 bg-red-500/10 px-5 py-4 text-red-100">
+          {error}
+        </div>
+      )}
 
       {loading ? (
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-          {[1, 2, 3, 4].map((item) => <div key={item} className="h-36 animate-pulse rounded-3xl bg-white/10" />)}
+          {[1, 2, 3, 4].map((item) => (
+            <div
+              key={item}
+              className="h-36 animate-pulse rounded-3xl bg-white/10"
+            />
+          ))}
         </div>
       ) : (
         <>
           <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
             {statCards.map((card) => (
-              <div key={card.title} className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.07] p-5 shadow-2xl shadow-black/20">
+              <div
+                key={card.title}
+                className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.07] p-5 shadow-2xl shadow-black/20"
+              >
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-sm text-slate-400">{card.title}</p>
-                    <p className="mt-2 text-3xl font-black">{card.value}</p>
+                    <p className="text-sm text-slate-400">
+                      {card.title}
+                    </p>
+
+                    <p className="mt-2 text-3xl font-black">
+                      {card.value}
+                    </p>
                   </div>
-                  <div className={`grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br ${card.accent} text-2xl shadow-lg`}>{card.icon}</div>
+
+                  <div
+                    className={`grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br ${card.accent} text-2xl shadow-lg`}
+                  >
+                    {card.icon}
+                  </div>
                 </div>
-                <p className="mt-4 text-sm text-slate-400">{card.note}</p>
+
+                <p className="mt-4 text-sm text-slate-400">
+                  {card.note}
+                </p>
               </div>
             ))}
           </section>
@@ -292,201 +417,172 @@ function AdminDashboard() {
             <div className="rounded-3xl border border-white/10 bg-white/[0.06] p-6 shadow-2xl shadow-black/20">
               <div className="mb-6 flex items-center justify-between">
                 <div>
-                  <h2 className="text-2xl font-black">7-day revenue</h2>
-                  <p className="text-sm text-slate-400">Paid and COD revenue trend</p>
+                  <h2 className="text-2xl font-black">
+                    7-day revenue
+                  </h2>
+
+                  <p className="text-sm text-slate-400">
+                    Paid and COD revenue trend
+                  </p>
                 </div>
-                <Link to="/admin/orders" className="rounded-full bg-orange-500 px-4 py-2 text-sm font-bold text-white hover:bg-orange-400">View orders</Link>
+
+                <Link
+                  to="/admin/orders"
+                  className="rounded-full bg-orange-500 px-4 py-2 text-sm font-bold text-white hover:bg-orange-400"
+                >
+                  View orders
+                </Link>
               </div>
 
               <div className="flex h-72 items-end gap-3 rounded-3xl bg-black/25 p-4">
-                {stats.revenueSeries.length ? stats.revenueSeries.map((item) => (
-                  <div key={item._id} className="flex flex-1 flex-col items-center gap-2">
-                    <div className="flex w-full items-end rounded-t-2xl bg-white/5" style={{ height: "220px" }}>
+                {stats.revenueSeries.length ? (
+                  stats.revenueSeries.map((item) => (
+                    <div
+                      key={item._id}
+                      className="flex flex-1 flex-col items-center gap-2"
+                    >
                       <div
-                        className="w-full rounded-t-2xl bg-gradient-to-t from-orange-500 to-amber-200 shadow-lg shadow-orange-950/30"
-                        style={{ height: `${Math.max(10, ((item.revenue || 0) / maxRevenue) * 100)}%` }}
-                        title={`${item._id}: ${formatCurrency(item.revenue)}`}
-                      />
+                        className="flex w-full items-end rounded-t-2xl bg-white/5"
+                        style={{ height: "220px" }}
+                      >
+                        <div
+                          className="w-full rounded-t-2xl bg-gradient-to-t from-orange-500 to-amber-200 shadow-lg shadow-orange-950/30"
+                          style={{
+                            height: `${Math.max(
+                              10,
+                              ((item.revenue || 0) / maxRevenue) * 100
+                            )}%`,
+                          }}
+                        />
+                      </div>
+
+                      <p className="text-xs text-slate-400">
+                        {item._id?.slice(5)}
+                      </p>
                     </div>
-                    <p className="text-xs text-slate-400">{item._id?.slice(5)}</p>
-                  </div>
-                )) : <p className="m-auto text-slate-400">No paid revenue yet.</p>}
+                  ))
+                ) : (
+                  <p className="m-auto text-slate-400">
+                    No paid revenue yet.
+                  </p>
+                )}
               </div>
             </div>
 
             <div className="space-y-6">
               <Panel title="Operations health">
-                <Metric label="Orders" value={stats.totals.orders} />
-                <Metric label="Delivered" value={stats.totals.deliveredOrders} />
-                <Metric label="Fulfillment" value={`${stats.performance.fulfillmentRate}%`} />
-                <Metric label="Cancellation" value={`${stats.performance.cancellationRate}%`} danger={stats.performance.cancellationRate > 10} />
+                <Metric
+                  label="Orders"
+                  value={stats.totals.orders}
+                />
+
+                <Metric
+                  label="Delivered"
+                  value={stats.totals.deliveredOrders}
+                />
+
+                <Metric
+                  label="Fulfillment"
+                  value={`${stats.performance.fulfillmentRate}%`}
+                />
+
+                <Metric
+                  label="Cancellation"
+                  value={`${stats.performance.cancellationRate}%`}
+                  danger={
+                    stats.performance.cancellationRate > 10
+                  }
+                />
               </Panel>
 
               <Panel title="Menu & users">
-                <Metric label="Users" value={stats.totals.users} />
-                <Metric label="Active Users" value={stats.totals.activeUsers} />
-                <Metric label="Pizzas Live" value={`${stats.totals.availablePizzas}/${stats.totals.pizzas}`} />
-                <Metric label="Toppings" value={stats.totals.toppings} />
+                <Metric
+                  label="Users"
+                  value={stats.totals.users}
+                />
+
+                <Metric
+                  label="Active Users"
+                  value={stats.totals.activeUsers}
+                />
+
+                <Metric
+                  label="Pizzas Live"
+                  value={`${stats.totals.availablePizzas}/${stats.totals.pizzas}`}
+                />
+
+                <Metric
+                  label="Toppings"
+                  value={stats.totals.toppings}
+                />
               </Panel>
             </div>
           </section>
 
           <section className="mt-6 grid gap-6 xl:grid-cols-2">
             <Panel title="Top pizzas">
-              {stats.topPizzas.length ? stats.topPizzas.map((pizza, index) => (
-                <div key={pizza._id || index} className="flex items-center justify-between rounded-2xl bg-black/25 px-4 py-3">
-                  <div>
-                    <p className="font-bold">#{index + 1} {pizza._id}</p>
-                    <p className="text-sm text-slate-400">{pizza.quantity} sold</p>
-                  </div>
-                  <p className="font-black text-orange-200">{formatCurrency(pizza.revenue)}</p>
-                </div>
-              )) : <p className="text-slate-400">No sales data yet.</p>}
-            </Panel>
+              {stats.topPizzas.length ? (
+                stats.topPizzas.map((pizza, index) => (
+                  <div
+                    key={pizza._id || index}
+                    className="flex items-center justify-between rounded-2xl bg-black/25 px-4 py-3"
+                  >
+                    <div>
+                      <p className="font-bold">
+                        #{index + 1} {pizza._id}
+                      </p>
 
-            <Panel title="Recent orders">
-              {stats.recentOrders.length ? stats.recentOrders.map((order) => (
-                <div key={order._id} className="flex items-center justify-between rounded-2xl bg-black/25 px-4 py-3">
-                  <div>
-                    <p className="font-bold">#{order._id.slice(-6)} • {order.user?.name || "Guest"}</p>
-                    <p className="text-sm capitalize text-slate-400">{order.orderStatus} • {order.paymentStatus}</p>
-                  </div>
-                  <p className="font-black text-emerald-200">{formatCurrency(order.totalAmount)}</p>
-                </div>
-              )) : <p className="text-slate-400">No orders yet.</p>}
-            </Panel>
-          </section>
-        </>
-      )}
-    </main>
-
-
-        <div className={`rounded-2xl border px-5 py-4 ${stats.razorpay.isLive ? "border-emerald-300/30 bg-emerald-400/10" : "border-amber-300/30 bg-amber-400/10"}`}>
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-300">Razorpay</p>
-          <p className="mt-1 text-lg font-black">
-            {stats.razorpay.isLive ? "Live payments active" : stats.razorpay.isConfigured ? "Test mode / not live" : "Not configured"}
-          </p>
-          <p className="text-xs text-slate-400">Key: {stats.razorpay.keyPrefix}</p>
-        </div>
-      </div>
-
-      {error && <div className="mb-6 rounded-2xl border border-red-400/20 bg-red-500/10 px-5 py-4 text-red-100">{error}</div>}
-
-      {loading ? (
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-          {[1, 2, 3, 4].map((item) => <div key={item} className="h-36 animate-pulse rounded-3xl bg-white/10" />)}
-        </div>
-      ) : (
-        <>
-          <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-            {statCards.map((card) => (
-              <div key={card.title} className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.07] p-5 shadow-2xl shadow-black/20">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm text-slate-400">{card.title}</p>
-                    <p className="mt-2 text-3xl font-black">{card.value}</p>
-                  </div>
-                  <div className={`grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br ${card.accent} text-2xl shadow-lg`}>{card.icon}</div>
-                </div>
-                <p className="mt-4 text-sm text-slate-400">{card.note}</p>
-              </div>
-            ))}
-          </section>
-
-          <section className="mt-6 grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
-            <div className="rounded-3xl border border-white/10 bg-white/[0.06] p-6 shadow-2xl shadow-black/20">
-              <div className="mb-6 flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-black">7-day revenue</h2>
-                  <p className="text-sm text-slate-400">Paid and COD revenue trend</p>
-                </div>
-                <Link to="/admin/orders" className="rounded-full bg-orange-500 px-4 py-2 text-sm font-bold text-white hover:bg-orange-400">View orders</Link>
-              </div>
-
-              <div className="flex h-72 items-end gap-3 rounded-3xl bg-black/25 p-4">
-                {stats.revenueSeries.length ? stats.revenueSeries.map((item) => (
-                  <div key={item._id} className="flex flex-1 flex-col items-center gap-2">
-                    <div className="flex w-full items-end rounded-t-2xl bg-white/5" style={{ height: "220px" }}>
-                      <div
-                        className="w-full rounded-t-2xl bg-gradient-to-t from-orange-500 to-amber-200 shadow-lg shadow-orange-950/30"
-                        style={{ height: `${Math.max(10, ((item.revenue || 0) / maxRevenue) * 100)}%` }}
-                        title={`${item._id}: ${formatCurrency(item.revenue)}`}
-                      />
+                      <p className="text-sm text-slate-400">
+                        {pizza.quantity} sold
+                      </p>
                     </div>
-                    <p className="text-xs text-slate-400">{item._id?.slice(5)}</p>
+
+                    <p className="font-black text-orange-200">
+                      {formatCurrency(pizza.revenue)}
+                    </p>
                   </div>
-                )) : <p className="m-auto text-slate-400">No paid revenue yet.</p>}
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <Panel title="Operations health">
-                <Metric label="Orders" value={stats.totals.orders} />
-                <Metric label="Delivered" value={stats.totals.deliveredOrders} />
-                <Metric label="Fulfillment" value={`${stats.performance.fulfillmentRate}%`} />
-                <Metric label="Cancellation" value={`${stats.performance.cancellationRate}%`} danger={stats.performance.cancellationRate > 10} />
-              </Panel>
-
-              <Panel title="Menu & users">
-                <Metric label="Users" value={stats.totals.users} />
-                <Metric label="Active Users" value={stats.totals.activeUsers} />
-                <Metric label="Pizzas Live" value={`${stats.totals.availablePizzas}/${stats.totals.pizzas}`} />
-                <Metric label="Toppings" value={stats.totals.toppings} />
-              </Panel>
-            </div>
-          </section>
-
-          <section className="mt-6 grid gap-6 xl:grid-cols-2">
-            <Panel title="Top pizzas">
-              {stats.topPizzas.length ? stats.topPizzas.map((pizza, index) => (
-                <div key={pizza._id || index} className="flex items-center justify-between rounded-2xl bg-black/25 px-4 py-3">
-                  <div>
-                    <p className="font-bold">#{index + 1} {pizza._id}</p>
-                    <p className="text-sm text-slate-400">{pizza.quantity} sold</p>
-                  </div>
-                  <p className="font-black text-orange-200">{formatCurrency(pizza.revenue)}</p>
-                </div>
-              )) : <p className="text-slate-400">No sales data yet.</p>}
+                ))
+              ) : (
+                <p className="text-slate-400">
+                  No sales data yet.
+                </p>
+              )}
             </Panel>
 
             <Panel title="Recent orders">
-              {stats.recentOrders.length ? stats.recentOrders.map((order) => (
-                <div key={order._id} className="flex items-center justify-between rounded-2xl bg-black/25 px-4 py-3">
-                  <div>
-                    <p className="font-bold">#{order._id.slice(-6)} • {order.user?.name || "Guest"}</p>
-                    <p className="text-sm capitalize text-slate-400">{order.orderStatus} • {order.paymentStatus}</p>
+              {stats.recentOrders.length ? (
+                stats.recentOrders.map((order) => (
+                  <div
+                    key={order._id}
+                    className="flex items-center justify-between rounded-2xl bg-black/25 px-4 py-3"
+                  >
+                    <div>
+                      <p className="font-bold">
+                        #{order._id.slice(-6)} •{" "}
+                        {order.user?.name || "Guest"}
+                      </p>
+
+                      <p className="text-sm capitalize text-slate-400">
+                        {order.orderStatus} •{" "}
+                        {order.paymentStatus}
+                      </p>
+                    </div>
+
+                    <p className="font-black text-emerald-200">
+                      {formatCurrency(order.totalAmount)}
+                    </p>
                   </div>
-                  <p className="font-black text-emerald-200">{formatCurrency(order.totalAmount)}</p>
-                </div>
-              )) : <p className="text-slate-400">No orders yet.</p>}
+                ))
+              ) : (
+                <p className="text-slate-400">
+                  No orders yet.
+                </p>
+              )}
             </Panel>
           </section>
         </>
       )}
     </main>
-
-  return (
-    <div className="text-white">
-      <h2 className="text-2xl font-bold mb-6">Admin Dashboard 👨‍🍳</h2>
-
-      <div className="grid md:grid-cols-4 gap-4 mb-8">
-        <StatCard title="Total Orders" value={stats.orders} />
-        <StatCard title="Total Users" value={stats.users} />
-        <StatCard title="Revenue" value={`₹${stats.revenue}`} />
-        <StatCard title="Pending Payments" value={stats.pendingPayments} />
-      </div>
-
-      <h3 className="text-xl font-semibold mb-4">Quick Management</h3>
-
-      <div className="grid md:grid-cols-3 gap-4">
-        <AdminCard title="Manage Pizzas" link="/admin/pizzas" />
-        <AdminCard title="Manage Toppings" link="/admin/toppings" />
-        <AdminCard title="Manage Orders" link="/admin/orders" />
-        <AdminCard title="Users" link="/admin/users" />
-      </div>
-    </div>
-
-
   );
 }
 
@@ -494,6 +590,7 @@ function Panel({ title, children }) {
   return (
     <div className="rounded-3xl border border-white/10 bg-white/[0.06] p-6 shadow-2xl shadow-black/20">
       <h2 className="mb-4 text-xl font-black">{title}</h2>
+
       <div className="space-y-3">{children}</div>
     </div>
   );
@@ -501,19 +598,17 @@ function Panel({ title, children }) {
 
 function Metric({ label, value, danger }) {
   return (
-
     <div className="flex items-center justify-between rounded-2xl bg-black/25 px-4 py-3">
       <span className="text-slate-400">{label}</span>
-      <span className={`font-black ${danger ? "text-red-300" : "text-white"}`}>{value}</span>
+
+      <span
+        className={`font-black ${
+          danger ? "text-red-300" : "text-white"
+        }`}
+      >
+        {value}
+      </span>
     </div>
-
-
-    <Link to={link} className="bg-gray-800 p-6 rounded-lg hover:bg-gray-700 transition border border-gray-700">
-      <h3 className="text-lg font-semibold">{title}</h3>
-      <p className="text-sm text-gray-400 mt-1">Open</p>
-    </Link>
-
-
   );
 }
 
