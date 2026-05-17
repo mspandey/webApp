@@ -6,12 +6,18 @@ export const demoPizzas = [
     image: "https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?auto=format&fit=crop&w=1200&q=80",
     basePrice: 199,
 
+
+
+
     rating: 4.8,
     numReviews: 124,
     reviews: [
       { _id: "review-demo-1", name: "Aarav", rating: 5, comment: "Cheese and basil balance was perfect. Great crust!", createdAt: "2026-04-12T10:00:00.000Z" },
       { _id: "review-demo-2", name: "Priya", rating: 4, comment: "Simple, fresh and very tasty.", createdAt: "2026-04-18T10:00:00.000Z" },
     ],
+
+
+
 
     sizes: [
       { name: "Personal", price: 0 },
@@ -32,12 +38,16 @@ export const demoPizzas = [
     image: "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=1200&q=80",
     basePrice: 289,
 
+
+
     rating: 4.6,
     numReviews: 98,
     reviews: [
       { _id: "review-demo-3", name: "Rohan", rating: 5, comment: "Loaded toppings and good value for money.", createdAt: "2026-04-22T10:00:00.000Z" },
       { _id: "review-demo-4", name: "Neha", rating: 4, comment: "Fresh veggies and nice sauce.", createdAt: "2026-05-02T10:00:00.000Z" },
     ],
+
+
 
     sizes: [
       { name: "Personal", price: 0 },
@@ -58,12 +68,18 @@ export const demoPizzas = [
     image: "https://images.unsplash.com/photo-1595854341625-f33ee10dbf94?auto=format&fit=crop&w=1200&q=80",
     basePrice: 329,
 
+
+
+
     rating: 4.9,
     numReviews: 156,
     reviews: [
       { _id: "review-demo-5", name: "Ankit", rating: 5, comment: "Tandoori paneer flavour is superb. Cheese burst recommended.", createdAt: "2026-05-07T10:00:00.000Z" },
       { _id: "review-demo-6", name: "Simran", rating: 5, comment: "Best spicy paneer pizza I tried recently.", createdAt: "2026-05-10T10:00:00.000Z" },
     ],
+
+
+
 
     sizes: [
       { name: "Personal", price: 0 },
