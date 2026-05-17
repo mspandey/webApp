@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -11,18 +11,18 @@ function Orders() {
   const { user } = useSelector((s) => s.auth);
   const navigate = useNavigate();
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     try {
       const res = await axios.get(`${import.meta.env.VITE_API_URL||"http://localhost:5000/api"}/orders/my`, {
         headers: { Authorization: `Bearer ${user.token}` },
       });
       setOrders(res.data.data);
-    } catch (err) {
+    } catch {
       setError("Failed to load orders");
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     if (!user) {
@@ -30,7 +30,7 @@ function Orders() {
       return;
     }
     fetchOrders();
-  }, [user, navigate]);
+  }, [user, navigate, fetchOrders]);
 
   const payNow = async (orderId) => {
     try {
@@ -75,8 +75,7 @@ function Orders() {
       const razorpay = new window.Razorpay(options);
       razorpay.open();
 
-    } catch (err) {
-      console.error(err);
+    } catch {
       alert("Payment failed ❌");
     }
   };

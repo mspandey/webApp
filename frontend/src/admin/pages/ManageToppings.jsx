@@ -17,7 +17,7 @@ export default function ManageToppings() {
     try {
       const res = await axios.get(`${import.meta.env.VITE_API_URL||"http://localhost:5000/api"}/toppings`);
       setToppings(res.data.data);
-    } catch (err) {
+    } catch {
       setError("Failed to load toppings");
     }
   };
@@ -46,7 +46,7 @@ export default function ManageToppings() {
       setName("");
       setPrice("");
       fetchToppings();
-    } catch (err) {
+    } catch {
       alert("Failed to add topping");
     } finally {
       setLoading(false);
@@ -62,7 +62,7 @@ export default function ManageToppings() {
       });
 
       fetchToppings();
-    } catch (err) {
+    } catch {
       alert("Failed to delete topping");
     }
   };

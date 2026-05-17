@@ -1,174 +1,190 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { useEffect, useMemo, useState } from "react";
+import api from "../../api/axios";
+import { Link, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { clearCart } from "../../features/cart/cartSlice";
+import { formatCurrency } from "../../utils/money";
 
 function Checkout() {
   const [address, setAddress] = useState("");
+  const [phone, setPhone] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("cod");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const { user } = useSelector((s) => s.auth);
   const { cart } = useSelector((s) => s.cart);
 
-  useEffect(() => {
-    if (!user) navigate("/login");
-    if (!cart || cart.items.length === 0) navigate("/cart");
-  }, [user, cart, navigate]);
-
-  const subtotal = cart?.items.reduce(
-    (sum, item) => sum + item.price * item.qty,
-    0
-  ) || 0;
-
-  const deliveryFee = 40;
+  const items = useMemo(() => cart?.items || [], [cart]);
+  const subtotal = items.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const deliveryFee = subtotal > 499 || subtotal === 0 ? 0 : 40;
   const total = subtotal + deliveryFee;
 
+  useEffect(() => {
+    if (!user) navigate("/login");
+    if (cart && items.length === 0) navigate("/cart");
+  }, [user, cart, items.length, navigate]);
+
+  const createOrder = async () => {
+    const res = await api.post("/orders", {
+      address,
+      phone,
+      paymentMethod,
+      deliveryFee,
+    });
+    return res.data.data;
+  };
+
+  const handleCodOrder = async () => {
+    await createOrder();
+    dispatch(clearCart());
+    navigate("/orders");
+  };
+
+  const handleOnlinePayment = async () => {
+    if (!window.Razorpay) {
+      setError("Razorpay script is not loaded. Please choose Cash on Delivery or add Razorpay checkout script in index.html.");
+      return;
+    }
+
+    const orderData = await createOrder();
+    const paymentRes = await api.post("/payment/create-order", { orderId: orderData._id });
+    const { order, key } = paymentRes.data;
+
+    const options = {
+      key,
+      amount: order.amount,
+      currency: "INR",
+      name: "PizzaCraft",
+      description: "Customized pizza order",
+      order_id: order.id,
+      handler: async (response) => {
+        await api.post("/payment/verify", { ...response, orderId: orderData._id });
+        dispatch(clearCart());
+        navigate("/orders");
+      },
+      prefill: {
+        name: user.name,
+        email: user.email,
+        contact: phone,
+      },
+      theme: { color: "#f97316" },
+    };
+
+    const razorpay = new window.Razorpay(options);
+    razorpay.open();
+  };
+
   const placeOrder = async () => {
-    if (!address.trim()) {
-      setError("Please enter delivery address");
+    if (!address.trim() || address.trim().length < 12) {
+      setError("Please enter a complete delivery address.");
+      return;
+    }
+    if (!/^\d{10}$/.test(phone.trim())) {
+      setError("Please enter a valid 10-digit phone number.");
       return;
     }
 
     try {
       setLoading(true);
       setError("");
-
-      // Create order
-      const orderRes = await axios.post(
-        `${import.meta.env.VITE_API_URL||"http://localhost:5000/api"}/orders`,
-        { address },
-        { headers: { Authorization: `Bearer ${user.token}` } }
-      );
-
-      const orderId = orderRes.data.data._id;
-
-      // Create Razorpay order
-      const paymentRes = await axios.post(
-        `${import.meta.env.VITE_API_URL||"http://localhost:5000/api"}/payment/create-order`,
-        { orderId },
-        { headers: { Authorization: `Bearer ${user.token}` } }
-      );
-
-      const { order, key } = paymentRes.data;
-
-      const options = {
-        key,
-        amount: order.amount,
-        currency: "INR",
-        name: "Pizza App",
-        description: "Pizza Order Payment",
-        order_id: order.id,
-
-        handler: async function (response) {
-          await axios.post(
-            `${import.meta.env.VITE_API_URL||"http://localhost:5000/api"}/payment/verify`,
-            { ...response, orderId },
-            { headers: { Authorization: `Bearer ${user.token}` } }
-          );
-
-          navigate("/orders");
-        },
-
-        prefill: {
-          name: user.name,
-          email: user.email,
-        },
-
-        theme: { color: "#ef4444" },
-      };
-
-      const razorpay = new window.Razorpay(options);
-      razorpay.open();
-
+      if (paymentMethod === "cod") await handleCodOrder();
+      else await handleOnlinePayment();
     } catch (err) {
-      console.error(err);
-      setError("Payment failed. Please try again.");
+      setError(err.response?.data?.error || "Checkout failed. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  if (!cart) return null;
-
   return (
-    <div className="bg-gray-900 min-h-screen py-10 px-4 text-white">
-      <div className="max-w-6xl mx-auto grid md:grid-cols-3 gap-8">
+    <main className="min-h-screen bg-[#080411] px-6 py-10 text-white">
+      <div className="mx-auto max-w-7xl">
+        <Link to="/cart" className="text-sm font-semibold text-orange-200 hover:text-orange-100">← Back to cart</Link>
+        <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_24rem]">
+          <section className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-6 shadow-2xl shadow-black/20 md:p-8">
+            <p className="text-sm font-bold uppercase tracking-[0.35em] text-orange-300">Checkout</p>
+            <h1 className="mt-2 text-4xl font-black">Delivery & payment</h1>
+            <p className="mt-3 text-slate-400">Add your delivery details and choose how you want to pay.</p>
 
-        {/* LEFT – Address & Payment */}
-        <div className="md:col-span-2 bg-gray-800 p-6 rounded-xl shadow-lg">
-          <h2 className="text-2xl font-bold mb-4">Checkout</h2>
-
-          <label className="block mb-2 text-sm text-gray-300">
-            Delivery Address
-          </label>
-
-          <textarea
-            placeholder="House no, street, city, pincode..."
-            className="w-full p-3 text-black rounded mb-3"
-            rows="4"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-          />
-
-          {error && (
-            <p className="text-red-500 mb-3">{error}</p>
-          )}
-
-          <button
-            onClick={placeOrder}
-            disabled={loading}
-            className={`w-full py-3 rounded-lg font-semibold transition ${
-              loading
-                ? "bg-gray-600"
-                : "bg-red-600 hover:bg-red-700"
-            }`}
-          >
-            {loading ? "Processing Payment..." : "Pay Securely with Razorpay 💳"}
-          </button>
-
-          <p className="text-xs text-gray-400 mt-3">
-            🔒 Your payment is securely processed by Razorpay
-          </p>
-        </div>
-
-        {/* RIGHT – Order Summary */}
-        <div className="bg-gray-800 p-6 rounded-xl shadow-lg h-fit sticky top-6">
-          <h3 className="text-xl font-semibold mb-4">Order Summary</h3>
-
-          <div className="space-y-2 text-sm">
-            {cart.items.map((item) => (
-              <div key={item._id} className="flex justify-between text-gray-300">
-                <span>{item.name} × {item.qty}</span>
-                <span>₹{item.price}</span>
+            <div className="mt-8 grid gap-5">
+              <div>
+                <label className="mb-2 block text-sm font-bold text-slate-200" htmlFor="phone">Phone number</label>
+                <input
+                  id="phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value.replace(/\D/g, "").slice(0, 10))}
+                  placeholder="9876543210"
+                  className="w-full rounded-2xl border border-white/10 bg-black/30 px-5 py-4 text-white outline-none ring-orange-400/40 placeholder:text-slate-500 focus:ring-4"
+                />
               </div>
-            ))}
-          </div>
 
-          <div className="border-t border-gray-700 my-4"></div>
+              <div>
+                <label className="mb-2 block text-sm font-bold text-slate-200" htmlFor="address">Delivery address</label>
+                <textarea
+                  id="address"
+                  placeholder="House no, street, area, city, pincode..."
+                  className="min-h-32 w-full rounded-2xl border border-white/10 bg-black/30 px-5 py-4 text-white outline-none ring-orange-400/40 placeholder:text-slate-500 focus:ring-4"
+                  value={address}
+                  onChange={(event) => setAddress(event.target.value)}
+                />
+              </div>
 
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span>Subtotal</span>
-              <span>₹{subtotal}</span>
+              <div>
+                <h2 className="text-lg font-black">Payment method</h2>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  {[
+                    ["cod", "Cash on Delivery", "Pay when your pizza arrives."],
+                    ["online", "Razorpay Online", "Cards, UPI, wallets, and net banking."],
+                  ].map(([value, title, copy]) => (
+                    <button
+                      key={value}
+                      onClick={() => setPaymentMethod(value)}
+                      className={`rounded-2xl border p-5 text-left transition ${paymentMethod === value ? "border-orange-300 bg-orange-400/20" : "border-white/10 bg-white/[0.06] hover:bg-white/[0.1]"}`}
+                    >
+                      <span className="block font-black">{title}</span>
+                      <span className="mt-2 block text-sm text-slate-300">{copy}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {error && <p className="rounded-2xl border border-red-400/20 bg-red-500/10 px-5 py-4 text-red-100">{error}</p>}
+
+              <button
+                onClick={placeOrder}
+                disabled={loading}
+                className="rounded-2xl bg-gradient-to-r from-red-500 to-orange-500 px-7 py-4 text-lg font-black shadow-xl shadow-red-950/30 transition hover:from-red-400 hover:to-orange-400 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loading ? "Placing order..." : paymentMethod === "cod" ? "Place COD Order" : "Pay Securely"}
+              </button>
             </div>
+          </section>
 
-            <div className="flex justify-between">
-              <span>Delivery</span>
-              <span>₹{deliveryFee}</span>
+          <aside className="h-fit rounded-[2rem] border border-white/10 bg-white/[0.08] p-6 shadow-2xl shadow-black/30 backdrop-blur lg:sticky lg:top-24">
+            <h2 className="text-2xl font-black">Order summary</h2>
+            <div className="mt-5 space-y-4">
+              {items.map((item) => (
+                <div key={item._id} className="flex justify-between gap-4 text-sm text-slate-300">
+                  <span>{item.name} × {item.qty}</span>
+                  <span>{formatCurrency(item.price * item.qty)}</span>
+                </div>
+              ))}
             </div>
-
-            <div className="flex justify-between text-lg font-bold text-red-500 mt-2">
-              <span>Total</span>
-              <span>₹{total}</span>
+            <div className="mt-6 space-y-4 border-t border-white/10 pt-5 text-slate-300">
+              <div className="flex justify-between"><span>Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
+              <div className="flex justify-between"><span>Delivery</span><span>{deliveryFee ? formatCurrency(deliveryFee) : "Free"}</span></div>
+              <div className="flex justify-between text-2xl font-black text-white"><span>Total</span><span>{formatCurrency(total)}</span></div>
             </div>
-          </div>
+            <p className="mt-5 text-xs leading-6 text-slate-400">🔒 Online payments are verified server-side. COD orders are immediately sent to the kitchen.</p>
+          </aside>
         </div>
-
       </div>
-    </div>
+    </main>
   );
 }
 
