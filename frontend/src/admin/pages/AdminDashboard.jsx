@@ -6,52 +6,23 @@ import { formatCurrency } from "../../utils/money";
 
 const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
-const emptyStats = {
-  totals: {
-    orders: 0,
-    users: 0,
-    activeUsers: 0,
-    pizzas: 0,
-    availablePizzas: 0,
-    toppings: 0,
-    paidOrders: 0,
-    codOrders: 0,
-    pendingPayments: 0,
-    deliveredOrders: 0,
-    cancelledOrders: 0,
-  },
-  money: {
-    grossRevenue: 0,
-    revenue: 0,
-    netRevenue: 0,
-    netWorth: 0,
-    todayRevenue: 0,
-    monthlyRevenue: 0,
-    averageOrderValue: 0,
-  },
-  performance: {
-    conversionRate: 0,
-    fulfillmentRate: 0,
-    cancellationRate: 0,
-  },
-  breakdowns: {
-    orderStatus: {},
-    paymentStatus: {},
-  },
-  recentOrders: [],
-  topPizzas: [],
-  revenueSeries: [],
-  razorpay: {
-    mode: "not_configured",
-    detectedMode: "not_configured",
-    isConfigured: false,
-    isLive: false,
-    keyPrefix: "missing",
-  },
-};
+const emptyStats = { totals: { orders: 0, users: 0, activeUsers: 0, pizzas: 0, availablePizzas: 0, toppings: 0, paidOrders: 0, codOrders: 0, pendingPayments: 0, deliveredOrders: 0, cancelledOrders: 0 }, money: { grossRevenue: 0, revenue: 0, netRevenue: 0, netWorth: 0, todayRevenue: 0, monthlyRevenue: 0, averageOrderValue: 0 }, performance: { conversionRate: 0, fulfillmentRate: 0, cancellationRate: 0 }, breakdowns: { orderStatus: {}, paymentStatus: {} }, recentOrders: [], topPizzas: [], revenueSeries: [], razorpay: { mode: "not_configured", detectedMode: "not_configured", isConfigured: false, isLive: false, keyPrefix: "missing" } };
 
 const normalizeStats = (payload) => {
   const data = payload?.data || payload || {};
+
+
+const startOfDay = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
+const startOfMonth = () => { const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0); return d; };
+
+const buildFallbackStats = ({ orders = [], users = [], pizzas = [], toppings = [], razorpay = {} }) => {
+  const paidOrders = orders.filter((o) => ["paid", "cod"].includes(o.paymentStatus));
+  const grossRevenue = paidOrders.reduce((s, o) => s + (Number(o.totalAmount) || 0), 0);
+  const todayRevenue = paidOrders.filter((o) => new Date(o.createdAt) >= startOfDay()).reduce((s, o) => s + (Number(o.totalAmount) || 0), 0);
+  const monthlyRevenue = paidOrders.filter((o) => new Date(o.createdAt) >= startOfMonth()).reduce((s, o) => s + (Number(o.totalAmount) || 0), 0);
+  const deliveredOrders = orders.filter((o) => o.orderStatus === "delivered").length;
+  const cancelledOrders = orders.filter((o) => o.orderStatus === "cancelled").length;
+
   return {
     ...emptyStats,
     totals: { ...emptyStats.totals, ...(data.totals || {}) },
@@ -94,6 +65,7 @@ const buildFallbackStats = ({ orders = [], users = [], pizzas = [], toppings = [
   const deliveredOrders = orders.filter((order) => order.orderStatus === "delivered").length;
   const cancelledOrders = orders.filter((order) => order.orderStatus === "cancelled").length;
 
+
   const topPizzaMap = paidOrders.reduce((acc, order) => {
     (order.items || []).forEach((item) => {
       const key = item.name || "Pizza";
@@ -103,6 +75,14 @@ const buildFallbackStats = ({ orders = [], users = [], pizzas = [], toppings = [
     });
     return acc;
   }, {});
+
+
+function Metric({ label, value }) { return <div className="flex items-center justify-between rounded-xl bg-black/20 px-3 py-2"><span className="text-slate-300">{label}</span><span className="font-bold">{value}</span></div>; }
+
+export default function AdminDashboard() {
+  const navigate = useNavigate();
+  const { user } = useSelector((s) => s.auth);
+
 
   return normalizeStats({
     totals: {
@@ -142,14 +122,16 @@ const buildFallbackStats = ({ orders = [], users = [], pizzas = [], toppings = [
 function AdminDashboard() {
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
+
   const [stats, setStats] = useState(emptyStats);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
-    const loadStats = async () => {
+    const load = async () => {
       try {
+
         setLoading(true);
         setError("");
         setNotice("");
@@ -157,11 +139,13 @@ function AdminDashboard() {
         const res = await axios.get(`${apiUrl}/admin/stats`, {
           headers: { Authorization: `Bearer ${user.token}` },
         });
+
         setStats(normalizeStats(res.data));
       } catch (err) {
         try {
           const headers = { Authorization: `Bearer ${user.token}` };
           const [ordersRes, usersRes, pizzasRes, toppingsRes, paymentRes] = await Promise.all([
+
             axios.get(`${apiUrl}/orders`, { headers }),
             axios.get(`${apiUrl}/user/users`, { headers }),
             axios.get(`${apiUrl}/pizzas`),
@@ -181,11 +165,11 @@ function AdminDashboard() {
           setNotice("Dashboard is showing live data from fallback endpoints while /admin/stats is unavailable.");
         } catch (fallbackErr) {
           setError(fallbackErr.response?.data?.error || err.response?.data?.error || "Failed to load admin dashboard");
+
         }
-      } finally {
-        setLoading(false);
-      }
+      } finally { setLoading(false); }
     };
+
 
     if (!user) navigate("/login");
     else if (user.role !== "admin") navigate("/dashboard");
@@ -206,3 +190,4 @@ function AdminDashboard() {
 }
 
 export default AdminDashboard;
+

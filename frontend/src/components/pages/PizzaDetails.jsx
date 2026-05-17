@@ -7,13 +7,16 @@ import { fetchPizzaById } from "../../features/pizza/pizzaService";
 import { addItemToCart } from "../../features/cart/cartSlice";
 import { formatCurrency } from "../../utils/money";
 
+
 const renderStars = (rating = 0) =>
   Array.from({ length: 5 }, (_, index) => (index < Math.round(rating) ? "★" : "☆")).join("");
+
 
 function PizzaDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
+
 
   const { user } = useSelector((state) => state.auth);
   const { isLoading: isCartLoading } = useSelector((state) => state.cart);
@@ -24,6 +27,8 @@ function PizzaDetails() {
   const [toppings, setToppings] = useState([]);
   const [selectedToppings, setSelectedToppings] = useState([]);
   const [qty, setQty] = useState(1);
+
+
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -40,12 +45,14 @@ function PizzaDetails() {
         setLoading(true);
         setError("");
 
+
         const pizzaData = await fetchPizzaById(id);
         if (!pizzaData) throw new Error("Pizza not found");
 
         setPizza(pizzaData);
         setSize(pizzaData.sizes?.[0] || null);
         setCrust(pizzaData.crusts?.[0] || null);
+
 
         try {
           const toppingRes = await api.get("/toppings");
@@ -62,9 +69,9 @@ function PizzaDetails() {
         setLoading(false);
       }
     };
-
     loadData();
   }, [id]);
+
 
   const toggleTopping = (topping) => {
     setSelectedToppings((current) =>
@@ -73,6 +80,7 @@ function PizzaDetails() {
         : [...current, topping]
     );
   };
+
 
   const unitPrice = useMemo(() => {
     if (!pizza) return 0;
@@ -86,6 +94,7 @@ function PizzaDetails() {
 
   const addToCartHandler = async () => {
     if (!user) return navigate("/login");
+
     if (!size || !crust) {
       setError("Please select size and crust before adding to cart.");
       return;
@@ -101,6 +110,7 @@ function PizzaDetails() {
       price: unitPrice,
       qty,
     };
+
 
     const result = await dispatch(addItemToCart(item));
     if (addItemToCart.fulfilled.match(result)) navigate("/cart");
