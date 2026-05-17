@@ -79,7 +79,7 @@ export default function ManagePizzas() {
       setIsAvailable(true);
 
       fetchPizzas();
-    } catch (err) {
+    } catch {
       alert("Failed to add pizza");
     } finally {
       setLoading(false);

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { useSelector } from "react-redux";
 
@@ -10,23 +10,23 @@ export default function ManageOrders() {
   const { user } = useSelector((s) => s.auth);
   const token = user?.token;
 
-  const loadOrders = async () => {
+  const loadOrders = useCallback(async () => {
     try {
       setLoading(true);
       const res = await axios.get(`${import.meta.env.VITE_API_URL||"http://localhost:5000/api"}/orders`    , {
         headers: { Authorization: `Bearer ${token}` },
       });
       setOrders(res.data.data);
-    } catch (err) {
+    } catch {
       setError("Failed to load orders");
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
     loadOrders();
-  }, []);
+  }, [loadOrders]);
 
   const updateStatus = async (id, status) => {
     try {
@@ -36,7 +36,7 @@ export default function ManageOrders() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       loadOrders();
-    } catch (err) {
+    } catch {
       alert("Failed to update order status");
     }
   };

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { useSelector } from "react-redux";
 
@@ -11,23 +11,23 @@ export default function ManageUsers() {
   const { user } = useSelector((s) => s.auth);
   const token = user?.token;
 
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     try {
       setLoading(true);
       const res = await axios.get(`${import.meta.env.VITE_API_URL||"http://localhost:5000/api"}/user/users`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUsers(res.data.data);
-    } catch (err) {
+    } catch {
       setError("Failed to load users");
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
     loadUsers();
-  }, []);
+  }, [loadUsers]);
 
   const deleteUser = async (id) => {
     if (!window.confirm("Delete this user permanently?")) return;
@@ -37,7 +37,7 @@ export default function ManageUsers() {
         headers: { Authorization: `Bearer ${token}` },
       });
       loadUsers();
-    } catch (err) {
+    } catch {
       alert("Failed to delete user");
     }
   };
