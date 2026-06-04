@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { loadDraft, clearDraft } from "../features/pizzaSlice";
+import { loadDraft, clearDraft } from "../features/pizza/pizzaSlice";
+
 
 const DRAFT_KEY = "pizza_draft";
 
