@@ -21,7 +21,17 @@ const pizzaSlice = createSlice({
     message: "",
     usingDemoMenu: false,
   },
-  reducers: {},
+  reducers: {
+    loadDraft: (state, action) => {
+      return { ...state, ...action.payload };
+    },
+    clearDraft: (state) => {
+      state.toppings = [];
+      state.size = "medium";
+      state.crust = "thin";
+      state.sauce = "tomato";
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(getPizzas.pending, (state) => {
@@ -40,16 +50,8 @@ const pizzaSlice = createSlice({
         state.message = action.payload;
         state.pizzas = demoPizzas;
         state.usingDemoMenu = true;
-      })
-      .addCase(loadDraft, (state, action) => {
-    return { ...state, ...action.payload };
-  })
-      .addCase(clearDraft, (state) => {
-        state.toppings = [];
-        state.size = "medium";
-        state.crust = "thin";
-        state.sauce = "tomato";
-      })
+      });
+  },
 });
 
 export default pizzaSlice.reducer;

@@ -1,17 +1,14 @@
 import { useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { logout } from "../../features/auth/authSlice";
 import { useDispatch, useSelector } from "react-redux";
-import PizzaVisualizer from "../components/PizzaVisualizer";
+import { Link, useNavigate } from "react-router-dom";
+import { logout } from "../../features/auth/authSlice";
 import { usePizzaDraft } from "../hooks/usePizzaDraft";
-import { clearPizzaDraft } from "../hooks/usePizzaDraft";
 
 function UserDashboard() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
   const { user } = useSelector((state) => state.auth);
-  const PizzaCustomization = () => {
   usePizzaDraft();
 
   useEffect(() => {
