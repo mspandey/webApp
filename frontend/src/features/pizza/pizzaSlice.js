@@ -40,8 +40,21 @@ const pizzaSlice = createSlice({
         state.message = action.payload;
         state.pizzas = demoPizzas;
         state.usingDemoMenu = true;
-      });
-  },
+      })
+      .addCase(loadDraft, (state, action) => {
+    return { ...state, ...action.payload };
+  })
+      .addCase(clearDraft, (state) => {
+        state.toppings = [];
+        state.size = "medium";
+        state.crust = "thin";
+        state.sauce = "tomato";
+      })
 });
 
 export default pizzaSlice.reducer;
+export const {
+  // ...your existing exports...,
+  loadDraft,
+  clearDraft,
+} = pizzaSlice.actions;
