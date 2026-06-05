@@ -17,6 +17,7 @@ export default function ManageCoupons() {
   const [maxDiscount, setMaxDiscount] = useState("");
   const [usageLimit, setUsageLimit] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
+  const [isPublic, setIsPublic] = useState(true);
 
   const { user } = useSelector((s) => s.auth);
   const token = user?.token;
@@ -46,6 +47,7 @@ export default function ManageCoupons() {
     setMaxDiscount("");
     setUsageLimit("");
     setExpiresAt("");
+    setIsPublic(true);
   };
 
   const createCoupon = async () => {
@@ -67,6 +69,7 @@ export default function ManageCoupons() {
           maxDiscount: Number(maxDiscount) || 0,
           usageLimit: Number(usageLimit) || 0,
           expiresAt: expiresAt || null,
+          isPublic,
         },
         authHeader
       );
@@ -89,6 +92,19 @@ export default function ManageCoupons() {
       fetchCoupons();
     } catch {
       alert("Failed to update coupon");
+    }
+  };
+
+  const togglePublic = async (coupon) => {
+    try {
+      await axios.put(
+        `${API}/coupons/${coupon._id}`,
+        { isPublic: !coupon.isPublic },
+        authHeader
+      );
+      fetchCoupons();
+    } catch {
+      alert("Failed to update coupon visibility");
     }
   };
 
@@ -182,6 +198,17 @@ export default function ManageCoupons() {
           className="w-full p-2 mb-3 rounded text-black"
         />
 
+        <div className="flex items-center mb-3">
+          <input
+            id="isPublic"
+            type="checkbox"
+            checked={isPublic}
+            onChange={(e) => setIsPublic(e.target.checked)}
+            className="mr-2"
+          />
+          <label htmlFor="isPublic" className="text-sm text-gray-300">Publicly Visible</label>
+        </div>
+
         <button
           onClick={createCoupon}
           disabled={loading}
@@ -226,7 +253,7 @@ export default function ManageCoupons() {
                   c.isActive ? "text-green-400" : "text-gray-500"
                 }`}
               >
-                {c.isActive ? "Active" : "Inactive"}
+                {c.isActive ? "Active" : "Inactive"} • {c.isPublic !== false ? "Public" : "Private"}
               </p>
             </div>
 
@@ -236,6 +263,12 @@ export default function ManageCoupons() {
                 className="text-yellow-400 hover:text-yellow-300 text-sm"
               >
                 {c.isActive ? "Disable" : "Enable"}
+              </button>
+              <button
+                onClick={() => togglePublic(c)}
+                className="text-orange-400 hover:text-orange-300 text-sm"
+              >
+                {c.isPublic !== false ? "Hide" : "Show"}
               </button>
               <button
                 onClick={() => deleteCoupon(c._id)}

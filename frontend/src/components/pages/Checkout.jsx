@@ -16,6 +16,9 @@ function Checkout() {
   const [discount, setDiscount] = useState(0);
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState("");
+  const [availableCoupons, setAvailableCoupons] = useState([]);
+  const [availableCouponsLoading, setAvailableCouponsLoading] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(null);
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -28,17 +31,46 @@ function Checkout() {
   const deliveryFee = subtotal > 499 || subtotal === 0 ? 0 : 40;
   const total = Math.max(0, subtotal - discount) + deliveryFee;
 
-  const applyCoupon = async () => {
-    if (!couponCode.trim()) return;
+  // Fetch available coupons on mount
+  useEffect(() => {
+    const fetchCoupons = async () => {
+      try {
+        setAvailableCouponsLoading(true);
+        const res = await api.get("/coupons/available");
+        setAvailableCoupons(res.data.data);
+      } catch (err) {
+        console.error("Failed to fetch available coupons", err);
+      } finally {
+        setAvailableCouponsLoading(false);
+      }
+    };
+    if (user) {
+      fetchCoupons();
+    }
+  }, [user]);
+
+  const copyCouponCode = (code) => {
+    navigator.clipboard.writeText(code);
+    setCopiedCode(code);
+    setTimeout(() => setCopiedCode(null), 2000);
+  };
+
+  const applyCoupon = async (code = null) => {
+    const codeToApply = code || couponCode.trim();
+    if (!codeToApply) return;
     try {
       setCouponLoading(true);
       setCouponError("");
       const res = await api.post("/coupons/validate", {
-        code: couponCode.trim(),
+        code: codeToApply,
         subtotal,
       });
       setDiscount(res.data.data.discount);
       setAppliedCode(res.data.data.code);
+      if (!code) {
+        // If we were using the input, clear it
+        setCouponCode("");
+      }
     } catch (err) {
       setDiscount(0);
       setAppliedCode("");
@@ -194,7 +226,7 @@ function Checkout() {
                     />
                     <button
                       type="button"
-                      onClick={applyCoupon}
+                      onClick={() => applyCoupon()}
                       disabled={couponLoading}
                       className="shrink-0 rounded-2xl border border-white/10 bg-white/[0.08] px-5 py-4 font-bold transition hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-60"
                     >
@@ -203,6 +235,90 @@ function Checkout() {
                   </div>
                 )}
                 {couponError && <p className="mt-2 text-sm text-red-300">{couponError}</p>}
+
+                {/* Available Coupons Section */}
+                {!appliedCode && (
+                  <div className="mt-4">
+                    <h3 className="text-sm font-bold text-slate-200 mb-3">Available Offers</h3>
+                    {availableCouponsLoading ? (
+                      <div className="text-sm text-slate-400">Loading offers...</div>
+                    ) : availableCoupons.length > 0 ? (
+                      <div className="space-y-3">
+                        {availableCoupons.map((coupon) => {
+                          // Check eligibility for current subtotal
+                          const isEligible = subtotal >= (coupon.minOrderAmount || 0);
+                          return (
+                            <div
+                              key={coupon._id}
+                              onClick={() => isEligible && setCouponCode(coupon.code)}
+                              className={`rounded-2xl border p-4 transition ${
+                                isEligible
+                                  ? "border-orange-300/50 bg-orange-400/10 cursor-pointer hover:border-orange-400"
+                                  : "border-white/10 bg-white/[0.06] opacity-70 cursor-not-allowed"
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-black text-lg text-orange-200">{coupon.code}</span>
+                                    {isEligible && (
+                                      <span className="text-xs font-bold px-2 py-1 rounded-full bg-green-500/20 text-green-300">
+                                        Eligible
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-slate-300 mt-1">
+                                    {coupon.description || "Get discount on your order"}
+                                  </p>
+                                  <div className="text-xs text-slate-400 mt-2">
+                                    {coupon.discountType === "percent"
+                                      ? `${coupon.discountValue}% off`
+                                      : `Flat ${formatCurrency(coupon.discountValue)} off`}
+                                    {coupon.minOrderAmount > 0 && ` on orders above ${formatCurrency(coupon.minOrderAmount)}`}
+                                    {coupon.maxDiscount > 0 && coupon.discountType === "percent" && (
+                                      ` • Max ${formatCurrency(coupon.maxDiscount)}`
+                                    )}
+                                    {coupon.expiresAt && (
+                                      ` • Expires on ${new Date(coupon.expiresAt).toLocaleDateString()}`
+                                    )}
+                                    {coupon.usageLimit > 0 && (
+                                      ` • ${coupon.usageLimit - coupon.usedCount} uses left`
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      copyCouponCode(coupon.code);
+                                    }}
+                                    className="text-xs font-bold px-3 py-1.5 rounded-xl border border-white/10 bg-white/[0.08] hover:bg-white/[0.14]"
+                                  >
+                                    {copiedCode === coupon.code ? "Copied!" : "Copy"}
+                                  </button>
+                                  {isEligible && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        applyCoupon(coupon.code);
+                                      }}
+                                      disabled={couponLoading}
+                                      className="text-xs font-bold px-3 py-1.5 rounded-xl bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-400 hover:to-orange-400 disabled:opacity-60"
+                                    >
+                                      Apply
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-slate-400">No offers available at the moment.</div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div>
