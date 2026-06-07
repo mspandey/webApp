@@ -1,11 +1,12 @@
 import Order from "../models/Order.js";
 import Cart from "../models/Cart.js";
 import Coupon from "../models/Coupon.js";
+import User from "../models/User.js";
 import { evaluateCoupon } from "./couponController.js";
 
 export const createOrder = async (req, res) => {
   try {
-    const { address, phone, paymentMethod = "cod", deliveryFee = 0, couponCode } = req.body;
+    const { address, phone, paymentMethod = "cod", deliveryFee = 0, couponCode, redeemPoints } = req.body;
 
     if (!address || address.trim().length < 12) {
       return res.status(400).json({ error: "Complete delivery address is required" });
@@ -45,7 +46,20 @@ export const createOrder = async (req, res) => {
       appliedCoupon = coupon;
     }
 
-    const totalAmount = subtotal - discount + safeDeliveryFee;
+    // Loyalty Points redemption calculation
+    const dbUser = await User.findById(req.user._id);
+    if (!dbUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    let loyaltyPointsRedeemed = 0;
+    if (redeemPoints) {
+      const maxRedeemable = Math.max(0, subtotal - discount);
+      loyaltyPointsRedeemed = Math.min(dbUser.loyaltyPoints || 0, maxRedeemable);
+    }
+
+    const totalAmount = subtotal - discount - loyaltyPointsRedeemed + safeDeliveryFee;
+    const loyaltyPointsEarned = Math.floor(Math.max(0, subtotal - discount - loyaltyPointsRedeemed) / 10);
 
     const order = await Order.create({
       user: req.user._id,
@@ -54,6 +68,9 @@ export const createOrder = async (req, res) => {
       deliveryFee: safeDeliveryFee,
       discount,
       couponCode: appliedCoupon ? appliedCoupon.code : null,
+      loyaltyPointsRedeemed,
+      loyaltyPointsEarned,
+      loyaltyPointsCredited: false,
       totalAmount,
       address: address.trim(),
       phone: String(phone),
@@ -61,6 +78,18 @@ export const createOrder = async (req, res) => {
       paymentStatus: paymentMethod === "cod" ? "cod" : "pending",
       orderStatus: "placed",
     });
+
+    if (loyaltyPointsRedeemed > 0) {
+      dbUser.loyaltyPoints -= loyaltyPointsRedeemed;
+      dbUser.loyaltyHistory.push({
+        points: -loyaltyPointsRedeemed,
+        type: "redeem",
+        description: `Redeemed on Order #${order._id.toString().slice(-6).toUpperCase()}`,
+        orderId: order._id,
+        createdAt: new Date(),
+      });
+      await dbUser.save();
+    }
 
     if (appliedCoupon) {
       appliedCoupon.usedCount += 1;
@@ -127,11 +156,94 @@ export const updateOrderStatus = async (req, res) => {
       return res.status(404).json({ error: "Order not found" });
     }
 
+    const oldStatus = order.orderStatus;
     order.orderStatus = req.body.status;
+
+    // Credit loyalty points on delivery
+    if (req.body.status === "delivered") {
+      await creditLoyaltyPoints(order);
+    }
+
+    // Handle refund/reversion on cancellation
+    if (req.body.status === "cancelled" && oldStatus !== "cancelled") {
+      await handleCancelledOrderLoyalty(order);
+    }
+
     await order.save();
 
     res.json({ success: true, data: order });
   } catch (error) {
+    console.error("Update order status error:", error);
     res.status(500).json({ error: "Failed to update order status" });
+  }
+};
+
+// Helper to credit loyalty points earned from an order
+export const creditLoyaltyPoints = async (order) => {
+  if (!order || order.loyaltyPointsCredited || order.loyaltyPointsEarned <= 0) {
+    return;
+  }
+  try {
+    const user = await User.findById(order.user);
+    if (user) {
+      user.loyaltyPoints = (user.loyaltyPoints || 0) + order.loyaltyPointsEarned;
+      user.loyaltyHistory.push({
+        points: order.loyaltyPointsEarned,
+        type: "earn",
+        description: `Earned from Order #${order._id.toString().slice(-6).toUpperCase()}`,
+        orderId: order._id,
+        createdAt: new Date(),
+      });
+      await user.save();
+      order.loyaltyPointsCredited = true;
+      await order.save();
+    }
+  } catch (error) {
+    console.error("Error crediting loyalty points:", error);
+  }
+};
+
+// Helper to handle cancelled orders (refund redeemed points and deduct earned points if credited)
+export const handleCancelledOrderLoyalty = async (order) => {
+  if (!order) return;
+  try {
+    const user = await User.findById(order.user);
+    if (!user) return;
+
+    let userUpdated = false;
+
+    // 1. Refund redeemed points
+    if (order.loyaltyPointsRedeemed > 0) {
+      user.loyaltyPoints = (user.loyaltyPoints || 0) + order.loyaltyPointsRedeemed;
+      user.loyaltyHistory.push({
+        points: order.loyaltyPointsRedeemed,
+        type: "refund",
+        description: `Refunded from cancelled Order #${order._id.toString().slice(-6).toUpperCase()}`,
+        orderId: order._id,
+        createdAt: new Date(),
+      });
+      userUpdated = true;
+    }
+
+    // 2. Deduct earned points if they were already credited
+    if (order.loyaltyPointsCredited && order.loyaltyPointsEarned > 0) {
+      user.loyaltyPoints = Math.max(0, (user.loyaltyPoints || 0) - order.loyaltyPointsEarned);
+      user.loyaltyHistory.push({
+        points: -order.loyaltyPointsEarned,
+        type: "refund",
+        description: `Deducted for cancelled Order #${order._id.toString().slice(-6).toUpperCase()}`,
+        orderId: order._id,
+        createdAt: new Date(),
+      });
+      order.loyaltyPointsCredited = false;
+      userUpdated = true;
+    }
+
+    if (userUpdated) {
+      await user.save();
+      await order.save();
+    }
+  } catch (error) {
+    console.error("Error handling cancelled order loyalty points:", error);
   }
 };

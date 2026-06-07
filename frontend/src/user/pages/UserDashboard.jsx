@@ -51,7 +51,7 @@ function UserDashboard() {
         </div>
 
         {/* Dashboard Cards */}
-        <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
 
           <DashboardCard
             title="My Cart"
@@ -68,8 +68,15 @@ function UserDashboard() {
           />
 
           <DashboardCard
+            title="Loyalty Points"
+            desc="Check your Pizza Coins & history"
+            link="/profile"
+            icon="🪙"
+          />
+
+          <DashboardCard
             title="My Profile"
-            desc="Update your personal info"
+            desc="Update settings & info"
             link="/profile"
             icon="👤"
           />

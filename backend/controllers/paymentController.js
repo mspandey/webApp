@@ -3,6 +3,7 @@ import crypto from "crypto";
 import razorpay, { assertRazorpayReady, getRazorpayMode } from "../config/razorpay.js";
 import Cart from "../models/Cart.js";
 import Order from "../models/Order.js";
+import { creditLoyaltyPoints } from "./orderController.js";
 
 export const createRazorpayOrder = async (req, res) => {
   try {
@@ -87,6 +88,8 @@ export const verifyPayment = async (req, res) => {
     order.paymentStatus = "paid";
     order.razorpayPaymentId = razorpay_payment_id;
     await order.save();
+
+    await creditLoyaltyPoints(order);
 
     const cart = await Cart.findOne({ user: req.user._id });
     if (cart) {

@@ -19,6 +19,9 @@ function Checkout() {
   const [availableCoupons, setAvailableCoupons] = useState([]);
   const [availableCouponsLoading, setAvailableCouponsLoading] = useState(false);
   const [copiedCode, setCopiedCode] = useState(null);
+  const [loyaltyPoints, setLoyaltyPoints] = useState(0);
+  const [redeemLoyalty, setRedeemLoyalty] = useState(false);
+  const [loyaltyLoading, setLoyaltyLoading] = useState(false);
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -29,7 +32,10 @@ function Checkout() {
   const items = useMemo(() => cart?.items || [], [cart]);
   const subtotal = items.reduce((sum, item) => sum + item.price * item.qty, 0);
   const deliveryFee = subtotal > 499 || subtotal === 0 ? 0 : 40;
-  const total = Math.max(0, subtotal - discount) + deliveryFee;
+  const maxRedeemablePoints = Math.min(loyaltyPoints, Math.max(0, subtotal - discount));
+  const loyaltyDiscount = redeemLoyalty ? maxRedeemablePoints : 0;
+  const total = Math.max(0, subtotal - discount - loyaltyDiscount) + deliveryFee;
+  const potentialEarnedPoints = Math.floor(Math.max(0, subtotal - discount - loyaltyDiscount) / 10);
 
   // Fetch available coupons on mount
   useEffect(() => {
@@ -46,6 +52,24 @@ function Checkout() {
     };
     if (user) {
       fetchCoupons();
+    }
+  }, [user]);
+
+  // Fetch loyalty points on mount
+  useEffect(() => {
+    const fetchLoyaltyPoints = async () => {
+      try {
+        setLoyaltyLoading(true);
+        const res = await api.get("/user/loyalty");
+        setLoyaltyPoints(res.data.data.loyaltyPoints || 0);
+      } catch (err) {
+        console.error("Failed to fetch loyalty points", err);
+      } finally {
+        setLoyaltyLoading(false);
+      }
+    };
+    if (user) {
+      fetchLoyaltyPoints();
     }
   }, [user]);
 
@@ -99,6 +123,7 @@ function Checkout() {
       paymentMethod,
       deliveryFee,
       couponCode: appliedCode || undefined,
+      redeemPoints: redeemLoyalty,
     });
     return res.data.data;
   };
@@ -321,6 +346,49 @@ function Checkout() {
                 )}
               </div>
 
+              {/* Loyalty Points Section */}
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">🪙</span>
+                    <div>
+                      <h3 className="font-bold text-slate-200">Loyalty Points</h3>
+                      <p className="text-sm text-slate-400">
+                        {loyaltyLoading ? (
+                          "Loading your balance..."
+                        ) : (
+                          `You have ${loyaltyPoints} points available (value: ${formatCurrency(loyaltyPoints)})`
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  {!loyaltyLoading && loyaltyPoints > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setRedeemLoyalty(!redeemLoyalty)}
+                      className={`rounded-xl px-4 py-2 text-sm font-bold transition ${
+                        redeemLoyalty
+                          ? "bg-orange-500 text-white"
+                          : "border border-white/10 bg-white/[0.08] hover:bg-white/[0.14]"
+                      }`}
+                    >
+                      {redeemLoyalty ? "Redeemed" : "Redeem"}
+                    </button>
+                  )}
+                </div>
+                {redeemLoyalty && maxRedeemablePoints > 0 && (
+                  <div className="mt-3 border-t border-white/10 pt-3 flex items-center justify-between text-sm text-green-300">
+                    <span>Redeeming {maxRedeemablePoints} points</span>
+                    <span>-{formatCurrency(maxRedeemablePoints)}</span>
+                  </div>
+                )}
+                {potentialEarnedPoints > 0 && (
+                  <p className="mt-2 text-xs text-orange-200/80">
+                    ✨ You will earn <b>{potentialEarnedPoints}</b> loyalty points from this order!
+                  </p>
+                )}
+              </div>
+
               <div>
                 <h2 className="text-lg font-black">Payment method</h2>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -367,6 +435,9 @@ function Checkout() {
               <div className="flex justify-between"><span>Delivery</span><span>{deliveryFee ? formatCurrency(deliveryFee) : "Free"}</span></div>
               {discount > 0 && (
                 <div className="flex justify-between text-green-300"><span>Discount{appliedCode ? ` (${appliedCode})` : ""}</span><span>-{formatCurrency(discount)}</span></div>
+              )}
+              {loyaltyDiscount > 0 && (
+                <div className="flex justify-between text-green-300"><span>Loyalty Discount</span><span>-{formatCurrency(loyaltyDiscount)}</span></div>
               )}
               <div className="flex justify-between text-2xl font-black text-white"><span>Total</span><span>{formatCurrency(total)}</span></div>
             </div>
