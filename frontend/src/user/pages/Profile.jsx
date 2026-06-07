@@ -12,6 +12,7 @@ export default function Profile() {
   const [loyaltyHistory, setLoyaltyHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [rupeePerPoint, setRupeePerPoint] = useState(1);
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -19,9 +20,13 @@ export default function Profile() {
     const fetchLoyaltyData = async () => {
       try {
         setLoading(true);
-        const res = await api.get("/user/loyalty");
-        setLoyaltyPoints(res.data.data.loyaltyPoints || 0);
-        setLoyaltyHistory(res.data.data.loyaltyHistory || []);
+        const [meRes, historyRes] = await Promise.all([
+          api.get("/loyalty/me"),
+          api.get("/loyalty/me/history?limit=50"),
+        ]);
+        setLoyaltyPoints(meRes.data.data.balance || 0);
+        setRupeePerPoint(meRes.data.data.settings?.rupeePerPoint || 1);
+        setLoyaltyHistory(historyRes.data.data.data || []);
       } catch (err) {
         console.error("Failed to fetch loyalty history", err);
       } finally {
@@ -120,7 +125,7 @@ export default function Profile() {
                     {loyaltyPoints} Points
                   </p>
                   <p className="text-sm text-slate-400 mt-2">
-                    Equivalent to <b className="text-white">{formatCurrency(loyaltyPoints)}</b> off your next order.
+                    Equivalent to <b className="text-white">{formatCurrency(loyaltyPoints * rupeePerPoint)}</b> off your next order.
                   </p>
                 </div>
               </div>
@@ -150,10 +155,8 @@ export default function Profile() {
               ) : (
                 <div className="mt-8 space-y-4 max-h-[30rem] overflow-y-auto pr-2 animate-fade-in">
                   {loyaltyHistory
-                    .slice()
-                    .reverse()
                     .map((item, idx) => {
-                      const isPositive = item.points > 0;
+                      const isPositive = item.type === "earn" || item.type === "refund";
                       const dateStr = new Date(item.createdAt).toLocaleDateString(undefined, {
                         year: "numeric",
                         month: "short",
@@ -170,14 +173,14 @@ export default function Profile() {
                           <div className="flex items-center gap-3">
                             <span
                               className={`grid h-10 w-10 place-items-center rounded-xl font-black text-lg ${
-                                item.type === "earn"
+                                isPositive
                                   ? "bg-green-500/10 text-green-400"
                                   : item.type === "redeem"
                                   ? "bg-orange-500/10 text-orange-400"
-                                  : "bg-blue-500/10 text-blue-400"
+                                  : "bg-red-500/10 text-red-400"
                               }`}
                             >
-                              {item.type === "earn" ? "📈" : item.type === "redeem" ? "📉" : "🔄"}
+                              {item.type === "earn" ? "📈" : item.type === "refund" ? "🔄" : item.type === "redeem" ? "📉" : "⚠️"}
                             </span>
                             <div>
                               <p className="font-bold text-slate-200">{item.description}</p>
@@ -189,7 +192,7 @@ export default function Profile() {
                               isPositive ? "text-green-400" : "text-orange-400"
                             }`}
                           >
-                            {isPositive ? `+${item.points}` : item.points}
+                            {isPositive ? `+${item.points}` : `-${item.points}`}
                           </span>
                         </div>
                       );

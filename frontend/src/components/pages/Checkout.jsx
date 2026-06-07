@@ -20,6 +20,7 @@ function Checkout() {
   const [availableCouponsLoading, setAvailableCouponsLoading] = useState(false);
   const [copiedCode, setCopiedCode] = useState(null);
   const [loyaltyPoints, setLoyaltyPoints] = useState(0);
+  const [loyaltySettings, setLoyaltySettings] = useState(null);
   const [redeemLoyalty, setRedeemLoyalty] = useState(false);
   const [loyaltyLoading, setLoyaltyLoading] = useState(false);
 
@@ -32,10 +33,22 @@ function Checkout() {
   const items = useMemo(() => cart?.items || [], [cart]);
   const subtotal = items.reduce((sum, item) => sum + item.price * item.qty, 0);
   const deliveryFee = subtotal > 499 || subtotal === 0 ? 0 : 40;
-  const maxRedeemablePoints = Math.min(loyaltyPoints, Math.max(0, subtotal - discount));
-  const loyaltyDiscount = redeemLoyalty ? maxRedeemablePoints : 0;
+
+  const minRedeemPoints = loyaltySettings?.minRedeemPoints || 50;
+  const maxRedeemPercent = loyaltySettings?.maxRedeemPercent || 50;
+  const rupeePerPoint = loyaltySettings?.rupeePerPoint || 1;
+  const isEnabled = loyaltySettings?.isEnabled ?? true;
+
+  const maxRedeemablePoints = useMemo(() => {
+    if (!isEnabled || loyaltyPoints < minRedeemPoints) return 0;
+    const maxDiscountAllowed = Math.floor((subtotal - discount) * maxRedeemPercent / 100);
+    const pointsNeededForMaxDiscount = rupeePerPoint > 0 ? Math.ceil(maxDiscountAllowed / rupeePerPoint) : 0;
+    return Math.min(loyaltyPoints, pointsNeededForMaxDiscount);
+  }, [loyaltyPoints, subtotal, discount, maxRedeemPercent, rupeePerPoint, minRedeemPoints, isEnabled]);
+
+  const loyaltyDiscount = redeemLoyalty ? maxRedeemablePoints * rupeePerPoint : 0;
   const total = Math.max(0, subtotal - discount - loyaltyDiscount) + deliveryFee;
-  const potentialEarnedPoints = Math.floor(Math.max(0, subtotal - discount - loyaltyDiscount) / 10);
+  const potentialEarnedPoints = Math.floor((subtotal - discount) * (loyaltySettings?.pointsPerRupee || 0.1));
 
   // Fetch available coupons on mount
   useEffect(() => {
@@ -55,13 +68,14 @@ function Checkout() {
     }
   }, [user]);
 
-  // Fetch loyalty points on mount
+  // Fetch loyalty settings & balance on mount
   useEffect(() => {
     const fetchLoyaltyPoints = async () => {
       try {
         setLoyaltyLoading(true);
-        const res = await api.get("/user/loyalty");
-        setLoyaltyPoints(res.data.data.loyaltyPoints || 0);
+        const res = await api.get("/loyalty/me");
+        setLoyaltyPoints(res.data.data.balance || 0);
+        setLoyaltySettings(res.data.data.settings || null);
       } catch (err) {
         console.error("Failed to fetch loyalty points", err);
       } finally {
@@ -72,6 +86,13 @@ function Checkout() {
       fetchLoyaltyPoints();
     }
   }, [user]);
+
+  // Enforce mutual exclusion between coupons and loyalty points
+  useEffect(() => {
+    if (appliedCode) {
+      setRedeemLoyalty(false);
+    }
+  }, [appliedCode]);
 
   const copyCouponCode = (code) => {
     navigator.clipboard.writeText(code);
@@ -123,7 +144,7 @@ function Checkout() {
       paymentMethod,
       deliveryFee,
       couponCode: appliedCode || undefined,
-      redeemPoints: redeemLoyalty,
+      redeemPoints: redeemLoyalty ? maxRedeemablePoints : 0,
     });
     return res.data.data;
   };
@@ -356,47 +377,62 @@ function Checkout() {
               </div>
 
               {/* Loyalty Points Section */}
-              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">🪙</span>
-                    <div>
-                      <h3 className="font-bold text-slate-200">Loyalty Points</h3>
-                      <p className="text-sm text-slate-400">
-                        {loyaltyLoading ? (
-                          "Loading your balance..."
-                        ) : (
-                          `You have ${loyaltyPoints} points available (value: ${formatCurrency(loyaltyPoints)})`
-                        )}
-                      </p>
+              {isEnabled && (
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">🪙</span>
+                      <div>
+                        <h3 className="font-bold text-slate-200">Loyalty Points</h3>
+                        <p className="text-sm text-slate-400">
+                          {loyaltyLoading ? (
+                            "Loading your balance..."
+                          ) : (
+                            `You have ${loyaltyPoints} points available (value: ${formatCurrency(loyaltyPoints * rupeePerPoint)})`
+                          )}
+                        </p>
+                      </div>
                     </div>
+                    {!loyaltyLoading && loyaltyPoints >= minRedeemPoints && !appliedCode && (
+                      <button
+                        type="button"
+                        onClick={() => setRedeemLoyalty(!redeemLoyalty)}
+                        className={`rounded-xl px-4 py-2 text-sm font-bold transition ${
+                          redeemLoyalty
+                            ? "bg-orange-500 text-white"
+                            : "border border-white/10 bg-white/[0.08] hover:bg-white/[0.14]"
+                        }`}
+                      >
+                        {redeemLoyalty ? "Redeemed" : "Redeem"}
+                      </button>
+                    )}
                   </div>
-                  {!loyaltyLoading && loyaltyPoints > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setRedeemLoyalty(!redeemLoyalty)}
-                      className={`rounded-xl px-4 py-2 text-sm font-bold transition ${
-                        redeemLoyalty
-                          ? "bg-orange-500 text-white"
-                          : "border border-white/10 bg-white/[0.08] hover:bg-white/[0.14]"
-                      }`}
-                    >
-                      {redeemLoyalty ? "Redeemed" : "Redeem"}
-                    </button>
+
+                  {/* Warnings / Information */}
+                  {appliedCode && (
+                    <p className="mt-2 text-xs text-orange-200/70">
+                      ℹ️ Loyalty points cannot be used in combination with coupons.
+                    </p>
+                  )}
+                  {!appliedCode && loyaltyPoints < minRedeemPoints && loyaltyPoints > 0 && (
+                    <p className="mt-2 text-xs text-orange-200/70">
+                      ℹ️ Minimum points required to redeem is <b>{minRedeemPoints}</b> points.
+                    </p>
+                  )}
+
+                  {redeemLoyalty && maxRedeemablePoints > 0 && (
+                    <div className="mt-3 border-t border-white/10 pt-3 flex items-center justify-between text-sm text-green-300">
+                      <span>Redeeming {maxRedeemablePoints} points</span>
+                      <span>-{formatCurrency(maxRedeemablePoints * rupeePerPoint)}</span>
+                    </div>
+                  )}
+                  {potentialEarnedPoints > 0 && (
+                    <p className="mt-2 text-xs text-orange-200/80">
+                      ✨ You will earn <b>{potentialEarnedPoints}</b> loyalty points from this order!
+                    </p>
                   )}
                 </div>
-                {redeemLoyalty && maxRedeemablePoints > 0 && (
-                  <div className="mt-3 border-t border-white/10 pt-3 flex items-center justify-between text-sm text-green-300">
-                    <span>Redeeming {maxRedeemablePoints} points</span>
-                    <span>-{formatCurrency(maxRedeemablePoints)}</span>
-                  </div>
-                )}
-                {potentialEarnedPoints > 0 && (
-                  <p className="mt-2 text-xs text-orange-200/80">
-                    ✨ You will earn <b>{potentialEarnedPoints}</b> loyalty points from this order!
-                  </p>
-                )}
-              </div>
+              )}
 
               <div>
                 <h2 className="text-lg font-black">Payment method</h2>
