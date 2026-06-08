@@ -13,6 +13,7 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [rupeePerPoint, setRupeePerPoint] = useState(1);
+  const [pointsPerRupee, setPointsPerRupee] = useState(0.1);
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -26,6 +27,7 @@ export default function Profile() {
         ]);
         setLoyaltyPoints(meRes.data.data.balance || 0);
         setRupeePerPoint(meRes.data.data.settings?.rupeePerPoint || 1);
+        setPointsPerRupee(meRes.data.data.settings?.pointsPerRupee || 0.1);
         setLoyaltyHistory(historyRes.data.data.data || []);
       } catch (err) {
         console.error("Failed to fetch loyalty history", err);
@@ -126,6 +128,9 @@ export default function Profile() {
                   </p>
                   <p className="text-sm text-slate-400 mt-2">
                     Equivalent to <b className="text-white">{formatCurrency(loyaltyPoints * rupeePerPoint)}</b> off your next order.
+                  </p>
+                  <p className="text-xs text-orange-300/80 mt-2">
+                    🪙 Earn 1 loyalty point per <b>{formatCurrency(pointsPerRupee > 0 ? Math.round(1 / pointsPerRupee) : 10)}</b> spent • Each point is worth <b>{formatCurrency(rupeePerPoint)}</b>.
                   </p>
                 </div>
               </div>

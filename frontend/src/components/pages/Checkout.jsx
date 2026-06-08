@@ -48,7 +48,9 @@ function Checkout() {
 
   const loyaltyDiscount = redeemLoyalty ? maxRedeemablePoints * rupeePerPoint : 0;
   const total = Math.max(0, subtotal - discount - loyaltyDiscount) + deliveryFee;
-  const potentialEarnedPoints = Math.floor((subtotal - discount) * (loyaltySettings?.pointsPerRupee || 0.1));
+  const pointsPerRupee = loyaltySettings?.pointsPerRupee ?? 0.1;
+  const rupeePerEarnedPoint = pointsPerRupee > 0 ? Math.round(1 / pointsPerRupee) : 10;
+  const potentialEarnedPoints = Math.floor((subtotal - discount) * pointsPerRupee);
 
   // Fetch available coupons on mount
   useEffect(() => {
@@ -412,6 +414,11 @@ function Checkout() {
                   {appliedCode && (
                     <p className="mt-2 text-xs text-orange-200/70">
                       ℹ️ Loyalty points cannot be used in combination with coupons.
+                    </p>
+                  )}
+                  {!appliedCode && (
+                    <p className="mt-2 text-xs text-orange-200/80">
+                      🪙 Earn 1 loyalty point per <b>{formatCurrency(rupeePerEarnedPoint)}</b> spent. Each point is worth <b>{formatCurrency(rupeePerPoint)}</b> discount.
                     </p>
                   )}
                   {!appliedCode && loyaltyPoints < minRedeemPoints && loyaltyPoints > 0 && (
