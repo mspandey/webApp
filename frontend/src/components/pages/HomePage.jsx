@@ -22,6 +22,27 @@ function HomePage() {
     );
   }, [pizzas, query]);
 
+  const reviews = [
+  {
+    name: "Aarav Sharma",
+    rating: "★★★★★",
+    review:
+      "The customization options are amazing and the ordering process is incredibly smooth.",
+  },
+  {
+    name: "Priya Singh",
+    rating: "★★★★★",
+    review:
+      "Fast delivery, great taste, and a beautiful ordering experience.",
+  },
+  {
+    name: "Rahul Verma",
+    rating: "★★★★★",
+    review:
+      "Loved being able to customize every detail of my pizza. Highly recommended!",
+  },
+];
+
   return (
     <main className="min-h-screen overflow-hidden bg-[#080411] text-white">
       <section className="relative isolate">
@@ -111,6 +132,7 @@ function HomePage() {
             />
           </div>
         </div>
+        
 
         {(usingDemoMenu || message) && (
           <div className="mb-6 rounded-2xl border border-amber-300/20 bg-amber-300/10 px-5 py-4 text-sm text-amber-100">
@@ -138,6 +160,44 @@ function HomePage() {
           ))}
         </div>
       </section>
+      <section className="mx-auto max-w-7xl px-6 py-20">
+  <div className="text-center">
+    <p className="text-sm font-bold uppercase tracking-[0.35em] text-orange-300">
+      Testimonials
+    </p>
+    <h2 className="mt-3 text-4xl font-black">
+      What Our Customers Say
+    </h2>
+    <p className="mx-auto mt-4 max-w-2xl text-slate-400">
+      Thousands of pizza lovers trust PizzaCraft for delicious,
+      customizable pizzas and a seamless ordering experience.
+    </p>
+  </div>
+
+  <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+    {reviews.map((review, index) => (
+      <div
+        key={index}
+        className="group rounded-3xl border border-white/10 bg-white/[0.05] p-6 backdrop-blur transition-all duration-300 hover:-translate-y-2 hover:border-orange-400/40 hover:shadow-xl hover:shadow-orange-900/20"
+      >
+        <div className="flex items-center gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-r from-orange-500 to-red-500 font-bold text-white">
+            {review.name.charAt(0)}
+          </div>
+
+          <div>
+            <h3 className="font-bold">{review.name}</h3>
+            <p className="text-orange-300">{review.rating}</p>
+          </div>
+        </div>
+
+        <p className="mt-5 leading-7 text-slate-300">
+          "{review.review}"
+        </p>
+      </div>
+    ))}
+  </div>
+</section>
 
       <section className="border-y border-white/10 bg-white/[0.04] py-16">
         <div className="mx-auto grid max-w-7xl gap-6 px-6 md:grid-cols-3">
