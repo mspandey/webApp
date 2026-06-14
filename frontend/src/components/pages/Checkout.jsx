@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { clearCart } from "../../features/cart/cartSlice";
 import { formatCurrency } from "../../utils/money";
+import LoadingScreen from "../ui/LoadingScreen";
 
 function Checkout() {
   const [address, setAddress] = useState("");
@@ -289,7 +290,12 @@ function Checkout() {
                   <div className="mt-4">
                     <h3 className="text-sm font-bold text-slate-200 mb-3">Available Offers</h3>
                     {availableCouponsLoading ? (
-                      <div className="text-sm text-slate-400">Loading offers...</div>
+                      <LoadingScreen
+                        compact
+                        title="Loading offers"
+                        description="Fetching available coupons and live discounts."
+                        className="bg-transparent px-0 py-2"
+                      />
                     ) : availableCoupons.length > 0 ? (
                       <div className="space-y-3">
                         {availableCoupons.map((coupon) => {
@@ -388,7 +394,12 @@ function Checkout() {
                         <h3 className="font-bold text-slate-200">Loyalty Points</h3>
                         <p className="text-sm text-slate-400">
                           {loyaltyLoading ? (
-                            "Loading your balance..."
+                            <LoadingScreen
+                              compact
+                              title="Loading loyalty balance"
+                              description="Checking your points before checkout."
+                              className="bg-transparent px-0 py-2"
+                            />
                           ) : (
                             `You have ${loyaltyPoints} points available (value: ${formatCurrency(loyaltyPoints * rupeePerPoint)})`
                           )}

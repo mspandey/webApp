@@ -3,6 +3,7 @@ import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import api from "../../api/axios";
 import { formatCurrency } from "../../utils/money";
+import LoadingScreen from "../../components/ui/LoadingScreen";
 
 export default function Profile() {
   const { user } = useSelector((s) => s.auth);
@@ -150,7 +151,12 @@ export default function Profile() {
               <p className="text-sm text-slate-400 mt-1">Track your earnings, redemptions, and refunds.</p>
 
               {loading ? (
-                <div className="py-12 text-center text-slate-400">Loading points history...</div>
+                <LoadingScreen
+                  compact
+                  title="Loading points history"
+                  description="Checking your loyalty balance and recent point activity."
+                  className="bg-transparent px-0 py-6"
+                />
               ) : loyaltyHistory.length === 0 ? (
                 <div className="py-20 text-center">
                   <span className="text-5xl block mb-4">🍕</span>

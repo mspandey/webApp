@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { useSelector } from "react-redux";
+import LoadingScreen from "../../components/ui/LoadingScreen";
 
 export default function ManageUsers() {
   const [users, setUsers] = useState([]);
@@ -48,7 +49,13 @@ export default function ManageUsers() {
       u.email.toLowerCase().includes(search.toLowerCase())
   );
 
-  if (loading) return <p className="text-white">Loading users...</p>;
+  if (loading)
+    return (
+      <LoadingScreen
+        title="Loading users"
+        description="Pulling the latest customer and admin accounts."
+      />
+    );
   if (error) return <p className="text-red-400">{error}</p>;
 
   return (

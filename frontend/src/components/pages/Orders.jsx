@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import LoadingScreen from "../ui/LoadingScreen";
 
 function Orders() {
   const [orders, setOrders] = useState([]);
@@ -80,7 +81,13 @@ function Orders() {
     }
   };
 
-  if (loading) return <p className="p-6">Loading orders...</p>;
+  if (loading)
+    return (
+      <LoadingScreen
+        title="Loading your orders"
+        description="Fetching your latest pizza orders and payment updates."
+      />
+    );
   if (error) return <p className="p-6 text-red-500">{error}</p>;
   if (orders.length === 0) return (
     <div className="p-6 max-w-4xl mx-auto h-full flex flex-col items-center justify-start pt-32">
