@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import LoadingScreen from "../ui/LoadingScreen";
 
 function Orders() {
   const [orders, setOrders] = useState([]);
@@ -80,9 +81,31 @@ function Orders() {
     }
   };
 
-  if (loading) return <p className="p-6">Loading orders...</p>;
+  if (loading)
+    return (
+      <LoadingScreen
+        title="Loading your orders"
+        description="Fetching your latest pizza orders and payment updates."
+      />
+    );
   if (error) return <p className="p-6 text-red-500">{error}</p>;
-  if (orders.length === 0) return <p className="p-6">You have no orders yet 🍕</p>;
+  if (orders.length === 0) return (
+    <div className="p-6 max-w-4xl mx-auto h-full flex flex-col items-center justify-start pt-32">
+      <div className="text-center">
+        <div className="text-6xl mb-4">🍕</div>
+        <h2 className="text-3xl font-bold text-white mb-2">No Orders Yet</h2>
+        <p className="text-gray-400 mb-6 max-w-sm">
+          You haven't placed any orders yet. Start exploring our delicious pizzas and place your first order!
+        </p>
+        <a
+          href="/"
+          className="inline-block bg-red-500 hover:bg-red-600 text-white font-semibold px-8 py-3 rounded-lg transition duration-300"
+        >
+          Order Now
+        </a>
+      </div>
+    </div>
+  );
 
   return (
     <div className="p-6 max-w-4xl mx-auto text-white">

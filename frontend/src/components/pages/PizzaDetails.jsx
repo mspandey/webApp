@@ -6,6 +6,7 @@ import { demoToppings } from "../../features/pizza/demoData";
 import { fetchPizzaById } from "../../features/pizza/pizzaService";
 import { addItemToCart } from "../../features/cart/cartSlice";
 import { formatCurrency } from "../../utils/money";
+import LoadingScreen from "../ui/LoadingScreen";
 
 const renderStars = (rating = 0) =>
   Array.from({ length: 5 }, (_, index) => (index < Math.round(rating) ? "★" : "☆")).join("");
@@ -139,7 +140,13 @@ function PizzaDetails() {
   };
 
   if (loading)
-    return <div className="min-h-screen bg-[#080411] px-6 py-20 text-white">Loading...</div>;
+    return (
+      <LoadingScreen
+        title="Loading pizza details"
+        description="Preparing sizes, crust options, toppings, and reviews for this pizza."
+        className="bg-[#080411] text-white"
+      />
+    );
   if (error && !pizza)
     return <div className="min-h-screen bg-[#080411] px-6 py-20 text-red-300">{error}</div>;
   if (!pizza) return null;

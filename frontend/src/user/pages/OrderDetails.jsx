@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import api from "../../api/axios";
+import LoadingScreen from "../../components/ui/LoadingScreen";
 
 const steps = ["placed", "confirmed", "preparing", "out_for_delivery", "delivered"];
 
@@ -27,7 +28,13 @@ export default function OrderDetails() {
   }, [id, user]);
 
   if (error) return <p className="p-6 text-red-400">{error}</p>;
-  if (!order) return <p className="p-6 text-white">Loading...</p>;
+  if (!order)
+    return (
+      <LoadingScreen
+        title="Loading order details"
+        description="Fetching the timeline and status for this order."
+      />
+    );
 
   const currentStep = steps.indexOf(order.orderStatus);
 

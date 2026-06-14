@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { useSelector } from "react-redux";
+import LoadingScreen from "../../components/ui/LoadingScreen";
 
 export default function ManageOrders() {
   const [orders, setOrders] = useState([]);
@@ -41,7 +42,13 @@ export default function ManageOrders() {
     }
   };
 
-  if (loading) return <p className="text-white">Loading orders...</p>;
+  if (loading)
+    return (
+      <LoadingScreen
+        title="Loading orders"
+        description="Fetching the latest orders, payment states, and customer details."
+      />
+    );
   if (error) return <p className="text-red-400">{error}</p>;
 
   return (
