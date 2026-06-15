@@ -114,7 +114,7 @@ function Orders() {
       {orders.map((o) => (
         <div
           key={o._id}
-          className="bg-gray-800 p-4 mb-4 rounded border border-gray-700"
+          className="bg-gray-800 p-4 mb-4 rounded border border-gray-700 cursor-pointer hover:border-orange-500 transition-colors" onClick={() => navigate(`/orders/${o._id}`)}
         >
           <div className="flex justify-between">
             <span className="font-semibold">Order ID:</span>
@@ -158,15 +158,24 @@ function Orders() {
             ))}
           </div>
 
-          {/* Pay Now Button */}
-          {o.paymentStatus === "pending" && (
+          {/* Buttons */}
+          <div className="mt-3 flex gap-2">
             <button
-              onClick={() => payNow(o._id)}
-              className="mt-3 bg-green-600 hover:bg-green-700 px-4 py-2 rounded"
+              onClick={() => navigate(`/orders/${o._id}`)}
+              className="bg-orange-500 hover:bg-orange-600 px-4 py-2 rounded text-sm font-semibold flex items-center gap-1"
             >
-              Pay Now 💳
+              🔴 Live Track
             </button>
-          )}
+
+            {o.paymentStatus === "pending" && (
+              <button
+                onClick={() => payNow(o._id)}
+                className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-sm"
+              >
+                Pay Now 💳
+              </button>
+            )}
+          </div>
         </div>
       ))}
     </div>

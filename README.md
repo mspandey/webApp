@@ -1,8 +1,6 @@
----
-
 # 🍕 Pizza Customization E-Commerce Web App
 
-A full-stack MERN based pizza ordering platform that allows users to customize pizzas, manage carts, place orders, make secure payments using Razorpay, and track order status. Includes a powerful admin dashboard for managing products, orders, users, and analytics.
+A full-stack MERN based pizza ordering platform that allows users to customize pizzas, manage carts, place orders, make secure payments using Razorpay, and track order status in real time. Includes a powerful admin dashboard for managing products, orders, users, and analytics.
 
 ---
 
@@ -15,7 +13,7 @@ A full-stack MERN based pizza ordering platform that allows users to customize p
 * Customize pizza (size, crust, toppings)
 * Add to cart & manage cart
 * Checkout with Razorpay payment gateway
-* View order history & order timeline
+* View order history & live order timeline
 * Profile management
 * Address book
 * Wishlist
@@ -57,6 +55,31 @@ A full-stack MERN based pizza ordering platform that allows users to customize p
 
 ---
 
+## 📸 Screenshots
+
+### 🏠 Home Page
+![Home Page](docs/screenshots/home.png)
+
+### 🍕 Pizza Customization
+![Pizza Customization](docs/screenshots/customization.png)
+
+### 🛒 Cart
+![Cart](docs/screenshots/cart.png)
+
+### 💳 Checkout
+![Checkout](docs/screenshots/checkout.png)
+
+### 📦 Order History
+![Order History](docs/screenshots/orders.png)
+
+### 🔴 Live Order Timeline
+![Order Timeline](docs/screenshots/order-timeline.png)
+
+### 🛠 Admin Dashboard
+![Admin Dashboard](docs/screenshots/admin-dashboard.png)
+
+---
+
 ## 📁 Project Structure
 
 ```
@@ -84,7 +107,7 @@ backend/
 
 ## ⚙️ Environment Variables
 
-Create `.env` in backend folder:
+Create `.env` in the `backend/` folder:
 
 ```env
 PORT=5000
@@ -104,11 +127,11 @@ EMAIL_PASS=your_email_password
 
 ## 🚀 Installation & Setup
 
-### 1️⃣ Clone repository
+### 1️⃣ Clone the repository
 
 ```bash
-git clone https://github.com/yourusername/pizza-customization-app.git
-cd pizza-customization-app
+git clone https://github.com/ankitsunil530/Pizza-Customization-Web-App.git
+cd Pizza-Customization-Web-App
 ```
 
 ### 2️⃣ Backend setup
@@ -136,7 +159,7 @@ npm run dev
 | User  | Shopping, orders, profile |
 | Admin | Full management dashboard |
 
-To make admin:
+To promote a user to admin:
 
 ```js
 db.users.updateOne({ email: "admin@email.com" }, { $set: { role: "admin" } })
@@ -163,18 +186,6 @@ success@razorpay
 
 ---
 
-## 📸 Screenshots (Optional)
-
-Add screenshots here:
-
-```
-/screenshots/home.png
-/screenshots/admin-dashboard.png
-/screenshots/checkout.png
-```
-
----
-
 ## 🛡 Security
 
 * JWT based authentication
@@ -187,9 +198,6 @@ Add screenshots here:
 
 ## 📊 Future Enhancements
 
-* Coupons & discount system
-* Loyalty points
-* Real-time order tracking
 * Push notifications
 * Mobile app version
 * Multi-vendor support
@@ -200,8 +208,8 @@ Add screenshots here:
 
 ## 🧑‍💻 Author
 
-**Sunil Kumar**
-Full Stack Developer (MERN)
+**Sunil Kumar**  
+Full Stack Developer (MERN)  
 GitHub: [https://github.com/ankitsunil530](https://github.com/ankitsunil530)
 
 ---
@@ -214,14 +222,5 @@ This project is licensed under the MIT License.
 
 ## ⭐ Support
 
-If you like this project, please ⭐ the repository and share it.
-
+If you like this project, please ⭐ the repository and share it.  
 For help or feature requests, open an issue.
-
----
-
-## 🏁 Conclusion
-
-This project demonstrates a complete real-world e-commerce architecture including authentication, payments, admin management, and scalable frontend design.
-
-Happy coding 🍕🔥
