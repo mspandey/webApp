@@ -4,10 +4,12 @@ export default function AddressBook() {
   const [addresses, setAddresses] = useState([]);
   const [newAddr, setNewAddr] = useState("");
 
-  const addAddress = () => {
-    setAddresses([...addresses, newAddr]);
-    setNewAddr("");
-  };
+ const addAddress = () => {
+  if (!newAddr.trim()) return;
+
+  setAddresses([...addresses, newAddr.trim()]);
+  setNewAddr("");
+};
 
   return (
     <div className="p-6 text-white">
