@@ -105,15 +105,15 @@ function App() {
             : <Login />
         }
       />
-
-      <Route
-        path="/register"
-        element={
-          user
-            ? <Navigate to={user.role === "admin" ? "/admin/dashboard" : "/dashboard"} />
-            : <Register />
-        }
-      />
+<Route
+  path="/register"
+  element={
+    user
+      ? <Navigate to={user.role === "admin" ? "/admin/dashboard" : "/dashboard"} replace />
+      : <Register />
+  }
+/>
+     
 
       {/* ================= USER DASHBOARD ================= */}
       <Route
@@ -143,15 +143,15 @@ function App() {
       </Route>
 
       {/* ================= FALLBACK ================= */}
-      <Route
-        path="*"
-        element={
-          user
-            ? <Navigate to={user.role === "admin" ? "/admin/dashboard" : "/dashboard"} />
-            : <Navigate to="/" />
-        }
-      />
-
+     
+<Route
+  path="*"
+  element={
+    user
+      ? <Navigate to={user.role === "admin" ? "/admin/dashboard" : "/dashboard"} replace />
+      : <Navigate to="/" replace />
+  }
+/>
     </Routes>
   );
 }
