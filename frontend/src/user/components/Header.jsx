@@ -14,10 +14,12 @@ function Header() {
       isActive ? "text-red-600" : "text-gray-700 hover:text-red-500"
     }`;
 
-  const handleLogout = () => {
-    dispatch(logout());
-  };
+  const navigate = useNavigate();
 
+const handleLogout = () => {
+  dispatch(logout());
+  navigate("/login");
+};
   return (
     <header className="bg-white border-b shadow-sm sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 h-16 flex justify-between items-center">
@@ -40,7 +42,9 @@ function Header() {
           {/* Cart */}
           <Link to="/cart" className="relative text-sm font-medium text-gray-700">
             Cart
-            {cartItems.length > 0 && (
+            {const cartItems = useSelector(
+  (state) => state.cart.items || []
+);(
               <span className="absolute -top-2 -right-3 bg-red-500 text-white text-xs px-2 rounded-full">
                 {cartItems.length}
               </span>
