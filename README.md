@@ -1,6 +1,6 @@
 # 🍕 Pizza Customization E-Commerce Web App
 
-A full-stack MERN based pizza ordering platform that allows users to customize pizzas, manage carts, place orders, make secure payments using Razorpay, and track order status in real time. Includes a powerful admin dashboard for managing products, orders, users, and analytics.
+A full-stack MERN-based pizza ordering platform that allows users to customize pizzas, manage carts, place orders, make secure payments using Razorpay, and track order status in real time. Includes a powerful admin dashboard for managing products, orders, users, and analytics.
 
 ---
 
@@ -8,12 +8,12 @@ A full-stack MERN based pizza ordering platform that allows users to customize p
 
 ### 👤 User Features
 
-* User authentication (JWT)
+* JWT-based user authentication
 * Browse pizza catalog
 * Customize pizza (size, crust, toppings)
-* Add to cart & manage cart
-* Checkout with Razorpay payment gateway
-* View order history & live order timeline
+* Add items to cart and manage cart
+* Secure checkout with Razorpay payment gateway
+* View order history and track order status in real time
 * Profile management
 * Address book
 * Wishlist
@@ -24,7 +24,7 @@ A full-stack MERN based pizza ordering platform that allows users to customize p
 ### 🛠 Admin Features
 
 * Admin authentication & role protection
-* Dashboard with analytics (orders, revenue, users, pending payments)
+* Dashboard with analytics for orders, revenue, users, and pending payments
 * Manage pizzas (CRUD)
 * Manage toppings (CRUD)
 * Manage orders & update order status
@@ -148,6 +148,8 @@ npm run dev
 cd frontend
 npm install
 npm run dev
+npm run build
+npm run preview
 ```
 
 ---
@@ -162,7 +164,11 @@ npm run dev
 To promote a user to admin:
 
 ```js
-db.users.updateOne({ email: "admin@email.com" }, { $set: { role: "admin" } })
+// Run in MongoDB Shell
+db.users.updateOne(
+  { email: "admin@email.com" },
+  { $set: { role: "admin" } }
+);
 ```
 
 ---
@@ -188,9 +194,9 @@ success@razorpay
 
 ## 🛡 Security
 
-* JWT based authentication
-* Role based route protection
-* Secure payment verification
+* JWT-based authentication
+* Role-based route protection
+* Razorpay payment signature verification
 * Password hashing using bcrypt
 * API request validation
 
